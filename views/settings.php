@@ -1,11 +1,11 @@
 <?php
 
 /**
- * Let's Encrypt controller.
+ * Openfire settings view.
  *
  * @category   apps
  * @package    lets-encrypt
- * @subpackage controllers
+ * @subpackage views
  * @author     Marc Laporte
  * @copyright  2017 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
@@ -25,46 +25,43 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.  
+//  
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
-// C L A S S
+// Load dependencies
 ///////////////////////////////////////////////////////////////////////////////
 
-/**
- * Let's Encrypt controller.
- *
- * @category   apps
- * @package    lets-encrypt
- * @subpackage controllers
- * @author     Marc Laporte
- * @copyright  2017 Marc Laporte
- * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       https://github.com/eglooca/app-lets-encrypt
- */
+$this->lang->load('base');
+$this->lang->load('lets_encrypt');
 
-class Lets_Encrypt extends ClearOS_Controller
-{
-    /**
-     * Let's Encrypt default controller.
-     *
-     * @return view
-     */
+///////////////////////////////////////////////////////////////////////////////
+// Form handler
+///////////////////////////////////////////////////////////////////////////////
 
-    function index()
-    {
-        // Load dependencies
-        //------------------
-
-        $this->lang->load('lets_encrypt');
-
-        // Load views
-        //-----------
-
-        $views = array('lets_encrypt/settings');
-
-        $this->page->view_controllers($views, lang('lets_encrypt_app_name'));
-    }
+if ($form_type === 'edit') {
+    $read_only = FALSE;
+    $buttons = array(
+        form_submit_update('submit'),
+        anchor_cancel('/app/lets_encrypt/settings'),
+    );
+} else {
+    $read_only = TRUE;
+    $buttons = array(
+        anchor_edit('/app/lets_encrypt/settings/edit')
+    );
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Form
+///////////////////////////////////////////////////////////////////////////////
+
+echo form_open('lets_encrypt/settings/edit');
+echo form_header(lang('base_settings'));
+
+echo field_input('email', $email, lang('base_email_address'), $read_only);
+echo field_button_set($buttons);
+
+echo form_footer();
+echo form_close();

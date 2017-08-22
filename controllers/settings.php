@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Let's Encrypt controller.
+ * Let's Encrypt settings controller.
  *
  * @category   apps
  * @package    lets-encrypt
@@ -34,7 +34,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Let's Encrypt controller.
+ * Let's Encrypt settings controller.
  *
  * @category   apps
  * @package    lets-encrypt
@@ -45,26 +45,92 @@
  * @link       https://github.com/eglooca/app-lets-encrypt
  */
 
-class Lets_Encrypt extends ClearOS_Controller
+class Settings extends ClearOS_Controller
 {
     /**
-     * Let's Encrypt default controller.
+     * Let's Encrypt settings default controller.
      *
      * @return view
      */
 
     function index()
     {
+        $this->_common('view');
+    }
+
+    /**
+     * Edit view.
+     *
+     * @return view
+     */
+
+    function edit()
+    {
+        $this->_common('edit');
+    }
+
+    /**
+     * View view.
+     *
+     * @return view
+     */
+
+    function view()
+    {
+        $this->_common('view');
+    }
+
+    /**
+     * Common view/edit handler.
+     *
+     * @param string $form_type form type
+     *
+     * @return view
+     */
+
+    function _common($form_type)
+    {
         // Load dependencies
         //------------------
 
         $this->lang->load('lets_encrypt');
+        $this->load->library('lets_encrypt/Lets_Encrypt');
+
+        // Set validation rules
+        //---------------------
+
+        $this->form_validation->set_policy('admin', 'lets_encrypt/Lets_Encrypt', 'validate_email');
+        $form_ok = $this->form_validation->run();
+
+        // Handle form submit
+        //-------------------
+
+        if ($this->input->post('submit') && $form_ok) {
+            try {
+                $this->lets_encrypt->set_email($this->input->post('email'));
+
+                $this->page->set_status_updated();
+                redirect('/lets_encrypt/settings');
+            } catch (Exception $e) {
+                $this->page->view_exception($e);
+                return;
+            }
+        }
+
+        // Load view data
+        //---------------
+
+        try {
+            $data['form_type'] = $form_type;
+            $data['email'] = $this->lets_encrypt->get_email();
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
 
         // Load views
         //-----------
 
-        $views = array('lets_encrypt/settings');
-
-        $this->page->view_controllers($views, lang('lets_encrypt_app_name'));
+        $this->page->view_form('lets_encrypt/settings', $data, lang('base_settings'));
     }
 }
