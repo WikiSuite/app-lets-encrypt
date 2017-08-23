@@ -57,11 +57,15 @@ clearos_load_language('lets_encrypt');
 
 use \clearos\apps\base\Configuration_File as Configuration_File;
 use \clearos\apps\base\File as File;
+use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Software as Software;
+use \clearos\apps\certificate_manager\SSL as SSL;
 
 clearos_load_library('base/Configuration_File');
 clearos_load_library('base/File');
+clearos_load_library('base/Folder');
 clearos_load_library('base/Software');
+clearos_load_library('certificate_manager/SSL');
 
 // Exceptions
 //-----------
@@ -95,6 +99,8 @@ class Lets_Encrypt extends Software
     ///////////////////////////////////////////////////////////////////////////////
 
     const APP_CONFIG = '/etc/clearos/lets_encrypt.conf';
+    const PATH_CERTIFICATES = '/etc/letsencrypt/live';
+    const FILE_CERT = 'cert.pem';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -116,6 +122,48 @@ class Lets_Encrypt extends Software
         clearos_profile(__METHOD__, __LINE__);
 
         parent::__construct('certbot');
+    }
+
+    /**
+     * Returns a list of certificates.
+     *
+     * @return array a list of certificates
+     */
+
+    public function get_certificates()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $folder = new Folder(self::PATH_CERTIFICATES, TRUE);
+        $certificate_list = $folder->get_listing();
+
+        $ssl = new SSL();
+
+        $certs = [];
+
+        foreach ($certificate_list as $certificate)
+            $certs[$certificate] = $ssl->get_certificate_attributes(self::PATH_CERTIFICATES . '/' . $certificate . '/' . self::FILE_CERT);
+
+        return $certs;
+    }
+
+    /**
+     * Returns certificate attributes.
+     *
+     * @param string $certificate certificate basename
+     *
+     * @return array list of certificate attributes
+     * @throws Certificate_Not_Found_Exception, Engine_Exception
+     */
+
+
+    public function get_certificate_attributes($certificate)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $ssl = new SSL();
+
+        return $ssl->get_certificate_attributes(self::PATH_CERTIFICATES . '/' . $certificate . '/' . self::FILE_CERT);
     }
 
     /**

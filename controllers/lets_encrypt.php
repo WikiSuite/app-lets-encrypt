@@ -63,7 +63,7 @@ class Lets_Encrypt extends ClearOS_Controller
         // Load views
         //-----------
 
-        $views = array('lets_encrypt/settings');
+        $views = array('lets_encrypt/settings', 'lets_encrypt/certificate');
 
         $this->page->view_controllers($views, lang('lets_encrypt_app_name'));
     }

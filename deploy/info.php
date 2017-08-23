@@ -27,6 +27,7 @@ $app['subcategory'] = lang('base_subcategory_security');
 
 $app['controllers']['lets_encrypt']['title'] = $app['name'];
 $app['controllers']['settings']['title'] = lang('base_settings');
+$app['controllers']['certificate']['title'] = lang('lets_encrypt_certificates');
 
 /////////////////////////////////////////////////////////////////////////////
 // Packaging

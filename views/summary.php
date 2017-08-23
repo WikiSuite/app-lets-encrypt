@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Let's Encrypt settings view.
+ * Let's Encrypt certificates summary view.
  *
  * @category   apps
  * @package    lets-encrypt
@@ -33,35 +33,42 @@
 // Load dependencies
 ///////////////////////////////////////////////////////////////////////////////
 
-$this->lang->load('base');
 $this->lang->load('lets_encrypt');
 
 ///////////////////////////////////////////////////////////////////////////////
-// Form handler
+// Headers
 ///////////////////////////////////////////////////////////////////////////////
 
-if ($form_type === 'edit') {
-    $read_only = FALSE;
-    $buttons = array(
-        form_submit_update('submit'),
-        anchor_cancel('/app/lets_encrypt/settings'),
+$headers = array(
+    lang('base_description'),
+    lang('lets_encrypt_expires'),
+);
+
+///////////////////////////////////////////////////////////////////////////////
+// Items
+///////////////////////////////////////////////////////////////////////////////
+
+foreach ($certificates as $cert => $details) {
+    $item['title'] = $cert;
+    $item['action'] = '/app/lets_encrypt/certificate/view/' . $cert;
+    $item['anchors'] = button_set(
+        array(anchor_view('/app/lets_encrypt/certificate/view/' . $cert, 'high'))
     );
-} else {
-    $read_only = TRUE;
-    $buttons = array(
-        anchor_edit('/app/lets_encrypt/settings/edit')
+    $item['details'] = array(
+        $cert,
+        $details['expires'],
     );
+
+    $items[] = $item;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Form
+// Summary table
 ///////////////////////////////////////////////////////////////////////////////
 
-echo form_open('lets_encrypt/settings/edit');
-echo form_header(lang('base_settings'));
-
-echo field_input('email', $email, lang('base_email_address'), $read_only);
-echo field_button_set($buttons);
-
-echo form_footer();
-echo form_close();
+echo summary_table(
+    lang('lets_encrypt_certificates'),
+    array(),
+    $headers,
+    $items
+);
