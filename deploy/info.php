@@ -35,7 +35,7 @@ $app['controllers']['certificate']['title'] = lang('lets_encrypt_certificates');
 
 $app['core_requires'] = array(
     'app-network-core',
-    'app-certificate-manager-core',
+    'app-certificate-manager-core >= 1:2.4.0',
     'certbot',
     'python2-certbot-apache',
 );

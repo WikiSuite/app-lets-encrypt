@@ -23,7 +23,7 @@ License: LGPLv3
 Group: ClearOS/Libraries
 Requires: app-base-core
 Requires: app-network-core
-Requires: app-certificate-manager-core
+Requires: app-certificate-manager-core >= 1:2.4.0
 Requires: certbot
 Requires: python2-certbot-apache
 
