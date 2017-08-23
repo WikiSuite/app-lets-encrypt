@@ -42,6 +42,7 @@ cp -r * %{buildroot}/usr/clearos/apps/lets_encrypt/
 
 install -d -m 0755 %{buildroot}/var/clearos/lets_encrypt
 install -d -m 0755 %{buildroot}/var/clearos/lets_encrypt/backup
+install -D -m 0644 packaging/lets_encrypt.conf %{buildroot}/etc/clearos/lets_encrypt.conf
 
 %post
 logger -p local6.notice -t installer 'app-lets-encrypt - installing'
@@ -86,3 +87,4 @@ exit 0
 /usr/clearos/apps/lets_encrypt/deploy
 /usr/clearos/apps/lets_encrypt/language
 /usr/clearos/apps/lets_encrypt/libraries
+%config(noreplace) /etc/clearos/lets_encrypt.conf

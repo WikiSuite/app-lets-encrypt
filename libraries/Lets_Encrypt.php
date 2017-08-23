@@ -52,9 +52,25 @@ clearos_load_language('lets_encrypt');
 // D E P E N D E N C I E S
 ///////////////////////////////////////////////////////////////////////////////
 
+// Classes
+//--------
+
+use \clearos\apps\base\Configuration_File as Configuration_File;
+use \clearos\apps\base\File as File;
 use \clearos\apps\base\Software as Software;
 
+clearos_load_library('base/Configuration_File');
+clearos_load_library('base/File');
 clearos_load_library('base/Software');
+
+// Exceptions
+//-----------
+
+use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
+use \clearos\apps\base\Validation_Exception as Validation_Exception;
+
+clearos_load_library('base/File_Not_Found_Exception');
+clearos_load_library('base/Validation_Exception');
 
 ///////////////////////////////////////////////////////////////////////////////
 // C L A S S
@@ -79,6 +95,13 @@ class Lets_Encrypt extends Software
     ///////////////////////////////////////////////////////////////////////////////
 
     const APP_CONFIG = '/etc/clearos/lets_encrypt.conf';
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // V A R I A B L E S
+    ///////////////////////////////////////////////////////////////////////////////
+
+    protected $is_loaded = FALSE;
+    protected $config = array();
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -106,7 +129,11 @@ class Lets_Encrypt extends Software
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        return 'bob@example.com';
+        $this->_load_config();
+
+        $email = (empty($this->config['email'])) ? '' : $this->config['email'];
+
+        return $email;
     }
 
     /**
@@ -121,6 +148,10 @@ class Lets_Encrypt extends Software
     public function set_email($email)
     {
         clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_email($email));
+
+        $this->_set_parameter('email', $email);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -135,13 +166,65 @@ class Lets_Encrypt extends Software
      * @return string error message if e-mail address is invalid
      */
 
-    public function validate_validate_email($email)
+    public function validate_email($email)
     {
         clearos_profile(__METHOD__, __LINE__);
+
+        if (!preg_match("/^([a-zA-Z0-9])+([a-zA-Z0-9\._-])*@([a-zA-Z0-9_-])+([a-zA-Z0-9\._-]+)+$/", $email))
+            return lang('base_email_address_invalid');
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // P R I V A T E   M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Loads configuration files.
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    protected function _load_config()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        try {
+            $config_file = new Configuration_File(self::APP_CONFIG);
+            $this->config = $config_file->load();
+        } catch (File_Not_Found_Exception $e) {
+            // Not fatal
+        }
+
+        $this->is_loaded = TRUE;
+    }
+
+    /**
+     * Sets a parameter in the config file.
+     *
+     * @param string $key   name of the key in the config file
+     * @param string $value value for the key
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    protected function _set_parameter($key, $value)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $this->is_loaded = FALSE;
+
+        $file = new File(self::APP_CONFIG);
+
+        if (! $file->exists())
+            $file->create("root", "root", "0644");
+
+        $match = $file->replace_lines("/^$key\s*=\s*/", "$key = $value\n");
+
+        if (!$match)
+            $file->add_lines("$key = $value\n");
+    }
 }

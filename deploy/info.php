@@ -43,6 +43,15 @@ $app['requires'] = array(
     'app-certificate-manager',
 );
 
+$app['core_file_manifest'] = array(
+    'lets_encrypt.conf' => array(
+        'target' => '/etc/clearos/lets_encrypt.conf',
+        'config' => TRUE,
+        'config_params' => 'noreplace',
+    ),
+);
+
+
 $app['core_directory_manifest'] = array(
     '/var/clearos/lets_encrypt' => array(),
     '/var/clearos/lets_encrypt/backup' => array(),
