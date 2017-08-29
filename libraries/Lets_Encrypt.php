@@ -148,6 +148,31 @@ class Lets_Encrypt extends Software
     }
 
     /**
+     * Returns a list of certificates.
+     *
+     * @return array a list of certificates
+     */
+
+    public function get_certificate_files()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $folder = new Folder(self::PATH_CERTIFICATES, TRUE);
+        $certificate_list = $folder->get_listing();
+
+        $cert_files = [];
+
+        foreach ($certificate_list as $certificate) {
+            $base_path = self::PATH_CERTIFICATES . '/' . $certificate . '/';
+            $cert_files[$certificate]['certificate-filename'] = $base_path . 'cert.pem';
+            $cert_files[$certificate]['key-filename'] = $base_path . 'privkey.pem';
+            $cert_files[$certificate]['intermediate-filename'] = $base_path . 'fullchain.pem';
+        }
+
+        return $cert_files;
+    }
+
+    /**
      * Returns certificate attributes.
      *
      * @param string $certificate certificate basename
@@ -203,7 +228,7 @@ class Lets_Encrypt extends Software
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // V A L I D A T I O N  M E T H O D S 
+    // V A L I D A T I O N  M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
 
     /**

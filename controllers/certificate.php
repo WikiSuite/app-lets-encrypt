@@ -153,6 +153,7 @@ class Certificate extends ClearOS_Controller
 
         $this->lang->load('lets_encrypt');
         $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('certificate_manager/Certificate_Manager');
 
         // Load view data
         //---------------
@@ -170,6 +171,8 @@ class Certificate extends ClearOS_Controller
                 $data['key_size'] = $attributes['key_size'];
                 $data['domains'] = $attributes['domains'];
                 $data['details'] = $attributes['details'];
+
+                $data['state'] = $this->certificate_manager->get_state($certificate);
             }
         } catch (Exception $e) {
             $this->page->view_exception($e);
