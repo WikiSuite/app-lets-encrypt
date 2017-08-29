@@ -12,6 +12,18 @@ $app['packager'] = 'WikiSuite';
 $app['license'] = 'GPLv3';
 $app['license_core'] = 'LGPLv3';
 $app['description'] = lang('lets_encrypt_app_description');
+$app['powered_by'] = array(
+    'vendor' => array(
+        'name' => 'Let\'s Encrypt',
+        'url' => 'https://letsencrypt.org',
+    ),
+    'packages' => array(
+        'certbot' => array(
+            'name' => 'Certbot',
+        ),
+    ),
+);
+
 
 /////////////////////////////////////////////////////////////////////////////
 // App name and categories
