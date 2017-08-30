@@ -45,19 +45,25 @@ if ($form_type === 'add') {
     $form = 'lets_encrypt/certificate/add/' . $type;
     $buttons = array(
         form_submit_add('submit-form'),
-        anchor_cancel('/app/lets_encrypt/certificate')
+        anchor_custom('/app/lets_encrypt', lang('base_return_to_summary'))
     );
 } else {
     $read_only = TRUE;
     $form = 'lets_encrypt/certificate';
     $buttons = array(
-        anchor_cancel('/app/lets_encrypt/certificate')
+        anchor_custom('/app/lets_encrypt', lang('base_return_to_summary'))
     );
 }
+
+if (empty($state))
+    array_unshift($buttons, anchor_custom('/app/lets_encrypt/certificate/delete/' . $certificate, lang('base_delete'), 'low'));
 
 ///////////////////////////////////////////////////////////////////////////////
 // Form
 ///////////////////////////////////////////////////////////////////////////////
+
+if (!empty($state))
+    echo infobox_highlight(lang('certificate_manager_deployed'), lang('certificate_manager_deployed_help'));
 
 echo form_open($form, array('id' => 'certificate_form'));
 echo form_header(lang('lets_encrypt_certificate'));

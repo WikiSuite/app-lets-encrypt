@@ -91,6 +91,52 @@ class Certificate extends ClearOS_Controller
     }
 
     /**
+     * Delete view.
+     *
+     * @param string $name certificate basename
+     *
+     * @return view
+     */
+
+    function delete($name = NULL)
+    {
+        $confirm_uri = '/app/lets_encrypt/certificate/destroy/' . $name;
+        $cancel_uri = '/app/lets_encrypt';
+        $items = array($name);
+
+        $this->page->view_confirm_delete($confirm_uri, $cancel_uri, $items);
+    }
+
+    /**
+     * Remove view.
+     *
+     * @param string $name certificate basename
+     *
+     * @return view
+     */
+
+    function destroy($name)
+    {
+        // Load libraries
+        //---------------
+
+        $this->load->library('Lets_Encrypt');
+
+        // Handle form submit
+        //-------------------
+
+        try {
+            $this->lets_encrypt->delete($name);
+            $this->page->set_status_deleted();
+
+            redirect('/lets_encrypt');
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
+    }
+
+    /**
      * View view.
      *
      * @return view

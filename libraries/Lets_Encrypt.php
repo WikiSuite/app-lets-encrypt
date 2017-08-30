@@ -47,6 +47,7 @@ require_once $bootstrap . '/bootstrap.php';
 ///////////////////////////////////////////////////////////////////////////////
 
 clearos_load_language('lets_encrypt');
+clearos_load_language('certificate_manager');
 
 ///////////////////////////////////////////////////////////////////////////////
 // D E P E N D E N C I E S
@@ -122,6 +123,23 @@ class Lets_Encrypt extends Software
         clearos_profile(__METHOD__, __LINE__);
 
         parent::__construct('certbot');
+    }
+
+    /**
+     * Deletes a certificate.
+     *
+     * @param string $name ceritificate name
+     *
+     * @return void
+     */
+
+    public function delete($name)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_certificate_name($name));
+
+        // FIXME: continue
     }
 
     /**
@@ -230,6 +248,24 @@ class Lets_Encrypt extends Software
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N  M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Validation routine for ceritificates.
+     *
+     * @param string $name certificate name
+     *
+     * @return string error message if certificate is invalid
+     */
+
+    public function validate_certificate_name($name)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $certificates = $this->get_certificates();
+
+        if (! array_key_exists($name, $certificates))
+            return lang('certificate_manager_certificate_invalid');
+    }
 
     /**
      * Validation routine for the admin e-mail address.
