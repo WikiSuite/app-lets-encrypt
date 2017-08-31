@@ -56,7 +56,7 @@ if ($form_type === 'add') {
 }
 
 if (empty($state))
-    array_unshift($buttons, anchor_custom('/app/lets_encrypt/certificate/delete/' . $certificate, lang('base_delete'), 'low'));
+    $buttons[] = anchor_custom('/app/lets_encrypt/certificate/delete/' . $certificate, lang('base_delete'), 'low');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Form

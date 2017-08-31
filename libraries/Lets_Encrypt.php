@@ -59,14 +59,18 @@ clearos_load_language('certificate_manager');
 use \clearos\apps\base\Configuration_File as Configuration_File;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
+use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\base\Software as Software;
 use \clearos\apps\certificate_manager\SSL as SSL;
+use \clearos\apps\network\Network_Utils as Network_Utils;
 
 clearos_load_library('base/Configuration_File');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
+clearos_load_library('base/Shell');
 clearos_load_library('base/Software');
 clearos_load_library('certificate_manager/SSL');
+clearos_load_library('network/Network_Utils');
 
 // Exceptions
 //-----------
@@ -101,7 +105,9 @@ class Lets_Encrypt extends Software
 
     const APP_CONFIG = '/etc/clearos/lets_encrypt.conf';
     const PATH_CERTIFICATES = '/etc/letsencrypt/live';
+    const COMMAND_CERTBOT = '/usr/bin/certbot';
     const FILE_CERT = 'cert.pem';
+    const FILE_LOG_PREFIX = 'lets-encrypt-';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -128,6 +134,51 @@ class Lets_Encrypt extends Software
     /**
      * Deletes a certificate.
      *
+     * @param string $email e-mail address to register for updates
+     * @param string $domain primary domain
+     * @param array $domains list of other domains
+     *
+     * @return void
+     */
+
+    public function add($email, $domain, $domains, $background = FALSE)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_email($email));
+        Validation_Exception::is_valid($this->validate_domain($domain));
+        if (!empty($domains))
+            Validation_Exception::is_valid($this->validate_domains($domains));
+
+        // Delete old log output file
+        $log_basename = self::FILE_LOG_PREFIX . $domain . '.log';
+
+        $log = new File(CLEAROS_TEMP_DIR . '/' . $log_basename, TRUE);
+/*
+FIXME
+        if ($log->exists())
+            $log->delete();
+*/
+
+        $options['log'] = $log_basename;
+        $options['validate_exit_code'] = FALSE;
+        $options['background'] = TRUE;
+
+        $shell = new Shell();
+        $exit_code = $shell->execute(self::COMMAND_CERTBOT, '--test-cert --apache --agree-tos -n -m ' . $email . ' -d ' . $domain . ' certonly', TRUE, $options);
+
+        if ($exit_code === 0) {
+            $retval = '';
+        } else {
+            $retval = 'error';
+        }
+
+        return $retval;
+    }
+
+    /**
+     * Deletes a certificate.
+     *
      * @param string $name ceritificate name
      *
      * @return void
@@ -139,7 +190,8 @@ class Lets_Encrypt extends Software
 
         Validation_Exception::is_valid($this->validate_certificate_name($name));
 
-        // FIXME: continue
+        $shell = new Shell();
+        $shell->execute(self::COMMAND_CERTBOT, 'delete --cert-name ' . $name, TRUE);
     }
 
     /**
@@ -228,6 +280,28 @@ class Lets_Encrypt extends Software
     }
 
     /**
+     * Returns array of log lines.
+     *
+     * @return array log lines
+     * @throws Engine_Exception
+     */
+
+    public function get_log($domain)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $log_basename = self::FILE_LOG_PREFIX . $domain . '.log';
+
+        $log = new File(CLEAROS_TEMP_DIR . '/' . $log_basename);
+        if (!$log->exists())
+            return [];
+
+        $lines = $log->get_contents_as_array();
+
+        return $lines;
+    }
+
+    /**
      * Sets the admin e-mail address.
      *
      * @param string $email admin e-mail address
@@ -265,6 +339,47 @@ class Lets_Encrypt extends Software
 
         if (! array_key_exists($name, $certificates))
             return lang('certificate_manager_certificate_invalid');
+    }
+
+    /**
+     * Validation routine for primary domain.
+     *
+     * @param string $domain primary domain
+     *
+     * @return string error message if primary domain is invalid
+     */
+
+    public function validate_domain($domain)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        if (!Network_Utils::is_valid_domain($domain))
+            return lang('network_domain_invalid');
+    }
+
+    /**
+     * Validation routine for primary domain.
+     *
+     * @param string $domain primary domain
+     *
+     * @return string error message if primary domain is invalid
+     */
+
+    public function validate_domains($domains)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $domains = preg_replace('/,/', ' ', $domains);
+        $domain_list = preg_split('/\s+/', $domains);
+        $valid = TRUE;
+
+        foreach ($domain_list as $domain) {
+            if ($this->validate_domain($domain))
+                $valid = FALSE;
+        }
+
+        if (!$valid)
+            return lang('lets_encrypt_domain_list_invalid');
     }
 
     /**

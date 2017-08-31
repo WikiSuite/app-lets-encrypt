@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Let's Encrypt certificates summary view.
+ * Let's Encrypt add certificates view.
  *
  * @category   apps
  * @package    lets-encrypt
@@ -33,48 +33,47 @@
 // Load dependencies
 ///////////////////////////////////////////////////////////////////////////////
 
+$this->lang->load('base');
 $this->lang->load('lets_encrypt');
 
 ///////////////////////////////////////////////////////////////////////////////
-// Anchors
+// Form handler
 ///////////////////////////////////////////////////////////////////////////////
 
-$anchors = array(anchor_add('/app/lets_encrypt/certificate/add'));
+if ($provisioning)
+    $read_only = TRUE;
+else
+    $read_only = FALSE;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Headers
+// Form
 ///////////////////////////////////////////////////////////////////////////////
 
-$headers = array(
-    lang('base_description'),
-    lang('lets_encrypt_expires'),
+if (!empty($state))
+    echo infobox_highlight(lang('certificate_manager_deployed'), lang('certificate_manager_deployed_help'));
+
+echo form_open('lets_encrypt/certificate/add');
+echo form_header(lang('lets_encrypt_certificate'));
+echo "<input type='hidden' id='lets_encrypt_validated' value='$provisioning'>";
+
+echo field_input('email', $email, lang('base_email_address'), $read_only);
+echo field_input('domain', $domain, lang('lets_encrypt_primary_domain'), $read_only);
+echo field_textarea('domains', $domains, lang('lets_encrypt_other_domains'), $read_only);
+
+echo field_button_set(
+    array(
+        form_submit_add('submit'),
+        anchor_cancel('/app/lets_encrypt')
+    )
 );
 
-///////////////////////////////////////////////////////////////////////////////
-// Items
-///////////////////////////////////////////////////////////////////////////////
-
-foreach ($certificates as $cert => $details) {
-    $item['title'] = $cert;
-    $item['action'] = '/app/lets_encrypt/certificate/view/' . $cert;
-    $item['anchors'] = button_set(
-        array(anchor_view('/app/lets_encrypt/certificate/view/' . $cert, 'high'))
-    );
-    $item['details'] = array(
-        $cert,
-        $details['expires'],
-    );
-
-    $items[] = $item;
-}
+echo form_footer();
+echo form_close();
 
 ///////////////////////////////////////////////////////////////////////////////
-// Summary table
+// Provisioning
 ///////////////////////////////////////////////////////////////////////////////
 
-echo summary_table(
-    lang('lets_encrypt_certificates'),
-    $anchors,
-    $headers,
-    $items
-);
+echo "<div id='provisioning' style='display:none'>";
+echo infobox_highlight(lang('base_status'), loading('normal', 'Requesting certificate...'));
+echo "</div>";

@@ -87,7 +87,59 @@ class Certificate extends ClearOS_Controller
 
     function add($type)
     {
-        $this->_item('add', '');
+        // Load dependencies
+        //------------------
+
+        $this->lang->load('lets_encrypt');
+        $this->load->library('lets_encrypt/Lets_Encrypt');
+
+        // Set validation rules
+        //---------------------
+
+        $this->form_validation->set_policy('email', 'lets_encrypt/Lets_Encrypt', 'validate_email', TRUE);
+        $this->form_validation->set_policy('domain', 'lets_encrypt/Lets_Encrypt', 'validate_domain', TRUE);
+        $this->form_validation->set_policy('domains', 'lets_encrypt/Lets_Encrypt', 'validate_domains');
+        $form_ok = $this->form_validation->run();
+
+        // Handle form submit
+        //-------------------
+
+        $data['provisioning'] = FALSE;
+
+        if ($this->input->post('submit') && $form_ok) {
+            try {
+                $this->lets_encrypt->add(
+                    $this->input->post('email'),
+                    $this->input->post('domain'),
+                    $this->input->post('domains'),
+                    TRUE
+                );
+
+                $data['provisioning'] = TRUE;
+                $data['domain'] = $this->input->post('domain');
+                $data['domains'] = $this->input->post('domains');
+
+                // Backgrounded, using Ajax to complete.
+            } catch (Exception $e) {
+                $this->page->view_exception($e);
+                return;
+            }
+        }
+
+        // Load view data
+        //---------------
+
+        try {
+            $data['email'] = $this->lets_encrypt->get_email();
+        } catch (Engine_Engine_Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
+
+        // Load views
+        //-----------
+
+        $this->page->view_form('lets_encrypt/add', $data, lang('lets_encrypt_certificates'));
     }
 
     /**

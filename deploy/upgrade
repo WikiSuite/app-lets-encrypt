@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Sudoers
+#--------
+
+/usr/sbin/addsudo /usr/bin/certbot app-lets-encrypt-core
