@@ -141,7 +141,7 @@ class Lets_Encrypt extends Software
      * @return void
      */
 
-    public function add($email, $domain, $domains, $background = FALSE)
+    public function add($email, $domain, $domains)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -151,27 +151,39 @@ class Lets_Encrypt extends Software
             Validation_Exception::is_valid($this->validate_domains($domains));
 
         // Delete old log output file
+        //---------------------------
+
         $log_basename = self::FILE_LOG_PREFIX . $domain . '.log';
 
         $log = new File(CLEAROS_TEMP_DIR . '/' . $log_basename, TRUE);
-/*
-FIXME
         if ($log->exists())
             $log->delete();
-*/
+
+        // Generate domain list
+        //---------------------
+
+        $raw_domains = trim($domain) . ' ' . trim($domains);
+        $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
+
+        // Run certbot
+        //------------
 
         $options['log'] = $log_basename;
         $options['validate_exit_code'] = FALSE;
-        $options['background'] = TRUE;
+        $options['env'] = 'LANG=en_US';
 
         $shell = new Shell();
-        $exit_code = $shell->execute(self::COMMAND_CERTBOT, '--test-cert --apache --agree-tos -n -m ' . $email . ' -d ' . $domain . ' certonly', TRUE, $options);
 
-        if ($exit_code === 0) {
+        // FIXME: For testing
+        // $test_cert = '';
+        $test_cert = '--test-cert';
+
+        $exit_code = $shell->execute(self::COMMAND_CERTBOT, $test_cert . ' --apache --agree-tos -n -m ' . $email . ' -d "' . $domain_param . '" certonly', TRUE, $options);
+
+        if ($exit_code === 0)
             $retval = '';
-        } else {
-            $retval = 'error';
-        }
+        else
+            $retval = $this->get_log($domain);
 
         return $retval;
     }
@@ -282,15 +294,17 @@ FIXME
     /**
      * Returns array of log lines.
      *
+     * @param string $certificate certificate basename
+     *
      * @return array log lines
      * @throws Engine_Exception
      */
 
-    public function get_log($domain)
+    public function get_log($certificate)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $log_basename = self::FILE_LOG_PREFIX . $domain . '.log';
+        $log_basename = self::FILE_LOG_PREFIX . $certificate . '.log';
 
         $log = new File(CLEAROS_TEMP_DIR . '/' . $log_basename);
         if (!$log->exists())
@@ -298,7 +312,22 @@ FIXME
 
         $lines = $log->get_contents_as_array();
 
-        return $lines;
+        $important = [];
+        $important_found = FALSE;
+
+        foreach ($lines as $line) {
+            // KLUDGE: trying to extract only the good stuff
+            if ($important_found)
+                $important[] = $line;
+
+            if (preg_match('/IMPORTANT NOTES:/', $line))
+                $important_found = TRUE;
+        }
+
+        if (empty($important))
+            $important = $lines;
+
+        return $important;
     }
 
     /**

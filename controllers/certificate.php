@@ -80,12 +80,10 @@ class Certificate extends ClearOS_Controller
     /**
      * Add view
      *
-     * @param string $type type of certificate
-     *
      * @return view
      */
 
-    function add($type)
+    function add()
     {
         // Load dependencies
         //------------------
@@ -108,12 +106,14 @@ class Certificate extends ClearOS_Controller
 
         if ($this->input->post('submit') && $form_ok) {
             try {
+                /*
                 $this->lets_encrypt->add(
                     $this->input->post('email'),
                     $this->input->post('domain'),
                     $this->input->post('domains'),
                     TRUE
                 );
+                */
 
                 $data['provisioning'] = TRUE;
                 $data['domain'] = $this->input->post('domain');
@@ -140,6 +140,34 @@ class Certificate extends ClearOS_Controller
         //-----------
 
         $this->page->view_form('lets_encrypt/add', $data, lang('lets_encrypt_certificates'));
+    }
+
+    /**
+     * Add via AJAX.
+     *
+     * @return void
+     */
+
+    function add_ajax()
+    {
+        // Load dependencies
+        //------------------
+
+        $this->lang->load('lets_encrypt');
+        $this->load->library('lets_encrypt/Lets_Encrypt');
+
+        // Add certificate
+        //----------------
+
+        $error = $this->lets_encrypt->add(
+            $this->input->post('email'),
+            $this->input->post('domain'),
+            $this->input->post('domains')
+        );
+
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Content-type: application/json');
+        echo json_encode($error);
     }
 
     /**
@@ -194,9 +222,44 @@ class Certificate extends ClearOS_Controller
      * @return view
      */
 
-    function view($certificate)
+    function view($certificate, $is_new = FALSE)
     {
-        $this->_item('view', $certificate);
+        // Load dependencies
+        //------------------
+
+        $this->lang->load('lets_encrypt');
+        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('certificate_manager/Certificate_Manager');
+
+        // Load view data
+        //---------------
+
+        try {
+            $data['form_type'] = $form_type;
+            $data['certificate'] = $certificate;
+
+            if ($form_type === 'add') {
+            } else {
+                $attributes = $this->lets_encrypt->get_certificate_attributes($certificate);
+
+                $data['issued'] = $attributes['issued'];
+                $data['expires'] = $attributes['expires'];
+                $data['key_size'] = $attributes['key_size'];
+                $data['domains'] = $attributes['domains'];
+                $data['details'] = $attributes['details'];
+
+                $data['state'] = $this->certificate_manager->get_state($certificate);
+                $data['is_new'] = $is_new;
+            }
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
+
+        // Load views
+        //-----------
+
+        $this->page->view_form('lets_encrypt/certificate', $data, lang('lets_encrypt_certificate'));
     }
 
     /**
@@ -238,48 +301,28 @@ class Certificate extends ClearOS_Controller
     /**
      * Common view/edit form.
      *
-     * @param string $form_type   form type
      * @parma string $certificate certificate
      *
      * @return view
      */
 
-    function _item($form_type, $certificate)
+    function get_log($certificate)
     {
         // Load dependencies
         //------------------
 
-        $this->lang->load('lets_encrypt');
         $this->load->library('lets_encrypt/Lets_Encrypt');
-        $this->load->library('certificate_manager/Certificate_Manager');
 
-        // Load view data
-        //---------------
+        // Grab data
+        //----------
 
-        try {
-            $data['form_type'] = $form_type;
-            $data['certificate'] = $certificate;
+        $log_lines = $this->lets_encrypt->get_log($certificate);
 
-            if ($form_type === 'add') {
-            } else {
-                $attributes = $this->lets_encrypt->get_certificate_attributes($certificate);
+        // Output
+        //-------
 
-                $data['issued'] = $attributes['issued'];
-                $data['expires'] = $attributes['expires'];
-                $data['key_size'] = $attributes['key_size'];
-                $data['domains'] = $attributes['domains'];
-                $data['details'] = $attributes['details'];
-
-                $data['state'] = $this->certificate_manager->get_state($certificate);
-            }
-        } catch (Exception $e) {
-            $this->page->view_exception($e);
-            return;
-        }
-
-        // Load views
-        //-----------
-
-        $this->page->view_form('lets_encrypt/certificate', $data, lang('lets_encrypt_certificate'));
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Content-type: application/json');
+        echo json_encode($log_lines);
     }
 }

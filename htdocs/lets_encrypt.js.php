@@ -35,10 +35,50 @@ header('Content-Type:application/x-javascript');
 
 $(document).ready(function() {
 
-    if ($("#lets_encrypt_validated").val() == 1) {
-    console.log('hola');
-        $("#provisioning").show();
+    $("#provisioning-form-wrapper").show();
+
+    if ($("#lets_encrypt_validated").val() == 1)
+         provisionDomain();
+
+    function provisionDomain() {
+        $("#provisioning-form-wrapper").hide();
+        $("#provisioning-log-wrapper").hide();
+        $("#provisioning-wrapper").show();
+
+        var domain = $("#domain").val();
+
+        $.ajax({
+            url: '/app/lets_encrypt/certificate/add_ajax',
+            method: 'POST',
+            data: 'ci_csrf_token=' + $.cookie('ci_csrf_token') + 
+                '&email=' + $("#email").val() +
+                '&domain=' + $("#domain").val() +
+                '&domains=' + $("#domains").val(),
+            success : function(payload) {
+                if (payload.length == 0)
+                    window.location = '/app/lets_encrypt/certificate/view/' + domain + '/true';
+                else
+                    showLog(payload);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                window.setTimeout(getLog, 3000);
+            }
+        });
     }
+
+    function showLog(payload) {
+        $("#provisioning-wrapper").hide();
+        $("#provisioning-form-wrapper").show();
+        $("#provisioning-log-wrapper").show();
+
+        var lines = '';
+
+        for (inx = 0; inx < payload.length; inx++)
+            lines += payload[inx] + '<br>';
+
+        $("#provisioning-log").html(lines);
+    }
+
 
 });
 

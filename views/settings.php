@@ -60,7 +60,7 @@ if ($form_type === 'edit') {
 echo form_open('lets_encrypt/settings/edit');
 echo form_header(lang('base_settings'));
 
-echo field_input('email', $email, lang('base_email_address'), $read_only);
+echo field_input('email', $email, lang('lets_encrypt_default_email_address'), $read_only);
 echo field_button_set($buttons);
 
 echo form_footer();

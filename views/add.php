@@ -37,28 +37,18 @@ $this->lang->load('base');
 $this->lang->load('lets_encrypt');
 
 ///////////////////////////////////////////////////////////////////////////////
-// Form handler
-///////////////////////////////////////////////////////////////////////////////
-
-if ($provisioning)
-    $read_only = TRUE;
-else
-    $read_only = FALSE;
-
-///////////////////////////////////////////////////////////////////////////////
 // Form
 ///////////////////////////////////////////////////////////////////////////////
 
-if (!empty($state))
-    echo infobox_highlight(lang('certificate_manager_deployed'), lang('certificate_manager_deployed_help'));
+echo "<div id='provisioning-form-wrapper' style='display:none'>";
 
 echo form_open('lets_encrypt/certificate/add');
 echo form_header(lang('lets_encrypt_certificate'));
 echo "<input type='hidden' id='lets_encrypt_validated' value='$provisioning'>";
 
-echo field_input('email', $email, lang('base_email_address'), $read_only);
-echo field_input('domain', $domain, lang('lets_encrypt_primary_domain'), $read_only);
-echo field_textarea('domains', $domains, lang('lets_encrypt_other_domains'), $read_only);
+echo field_input('email', $email, lang('base_email_address'));
+echo field_input('domain', $domain, lang('lets_encrypt_primary_domain'));
+echo field_textarea('domains', $domains, lang('lets_encrypt_other_domains'));
 
 echo field_button_set(
     array(
@@ -70,10 +60,16 @@ echo field_button_set(
 echo form_footer();
 echo form_close();
 
+echo "</div>";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Provisioning
 ///////////////////////////////////////////////////////////////////////////////
 
-echo "<div id='provisioning' style='display:none'>";
+echo "<div id='provisioning-wrapper' style='display:none'>";
 echo infobox_highlight(lang('base_status'), loading('normal', 'Requesting certificate...'));
+echo "</div>";
+
+echo "<div id='provisioning-log-wrapper' style='display:none'>";
+echo infobox_warning(lang('base_warning'), "<div id='provisioning-log'></div>");
 echo "</div>";

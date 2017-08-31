@@ -40,20 +40,11 @@ $this->lang->load('lets_encrypt');
 // Form handler
 ///////////////////////////////////////////////////////////////////////////////
 
-if ($form_type === 'add') {
-    $read_only = FALSE;
-    $form = 'lets_encrypt/certificate/add/' . $type;
-    $buttons = array(
-        form_submit_add('submit-form'),
-        anchor_custom('/app/lets_encrypt', lang('base_return_to_summary'))
-    );
-} else {
-    $read_only = TRUE;
-    $form = 'lets_encrypt/certificate';
-    $buttons = array(
-        anchor_custom('/app/lets_encrypt', lang('base_return_to_summary'))
-    );
-}
+$read_only = TRUE;
+$form = 'lets_encrypt/certificate';
+$buttons = array(
+    anchor_custom('/app/lets_encrypt', lang('base_return_to_summary'))
+);
 
 if (empty($state))
     $buttons[] = anchor_custom('/app/lets_encrypt/certificate/delete/' . $certificate, lang('base_delete'), 'low');
@@ -61,6 +52,9 @@ if (empty($state))
 ///////////////////////////////////////////////////////////////////////////////
 // Form
 ///////////////////////////////////////////////////////////////////////////////
+
+if ($is_new)
+    echo infobox_highlight(lang('lets_encrypt_certificate_created'), lang('lets_encrypt_certificate_created_help'));
 
 if (!empty($state))
     echo infobox_highlight(lang('certificate_manager_deployed'), lang('certificate_manager_deployed_help'));
@@ -81,7 +75,7 @@ echo form_close();
 // State
 ///////////////////////////////////////////////////////////////////////////////
 
-if ($form_type == 'view') {
+if (!$is_new) {
     $items = array();
     $anchors = array();
 
