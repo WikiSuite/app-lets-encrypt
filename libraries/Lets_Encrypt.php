@@ -48,6 +48,7 @@ require_once $bootstrap . '/bootstrap.php';
 
 clearos_load_language('lets_encrypt');
 clearos_load_language('certificate_manager');
+clearos_load_language('network');
 
 ///////////////////////////////////////////////////////////////////////////////
 // D E P E N D E N C I E S
