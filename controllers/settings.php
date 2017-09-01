@@ -99,7 +99,7 @@ class Settings extends ClearOS_Controller
         // Set validation rules
         //---------------------
 
-        $this->form_validation->set_policy('admin', 'lets_encrypt/Lets_Encrypt', 'validate_email');
+        $this->form_validation->set_policy('email', 'lets_encrypt/Lets_Encrypt', 'validate_email', TRUE);
         $form_ok = $this->form_validation->run();
 
         // Handle form submit
