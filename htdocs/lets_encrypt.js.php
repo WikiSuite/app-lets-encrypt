@@ -6,7 +6,7 @@
  * @category   apps
  * @package    lets-encrypt
  * @subpackage javascript
- * @author     Marc Laporte
+ * @author     eGloo <developer@egloo.ca>
  * @copyright  2017 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       https://github.com/eglooca/app-lets-encrypt
