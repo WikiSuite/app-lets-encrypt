@@ -15,7 +15,7 @@ Requires: app-base
 Requires: app-certificate-manager
 
 %description
-Description goes here.
+Let's Encrypt is an open certificate authority that provides free SSL certificates.
 
 %package core
 Summary: Let's Encrypt - Core
@@ -28,7 +28,7 @@ Requires: certbot
 Requires: python2-certbot-apache
 
 %description core
-Description goes here.
+Let's Encrypt is an open certificate authority that provides free SSL certificates.
 
 This package provides the core API and libraries.
 

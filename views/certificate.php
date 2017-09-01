@@ -84,11 +84,11 @@ if (!$is_new) {
         lang('base_details'),
     );
 
-    foreach ($state as $certificate) {
-        $item['title'] = $certificate['app_description'];
+    foreach ($state as $cert) {
+        $item['title'] = $cert['app_description'];
         $item['details'] = array(
-            $certificate['app_description'],
-            $certificate['app_key'],
+            $cert['app_description'],
+            $cert['app_key'],
         );
 
         $items[] = $item;
