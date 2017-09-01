@@ -173,16 +173,16 @@ class Certificate extends ClearOS_Controller
     /**
      * Delete view.
      *
-     * @param string $name certificate basename
+     * @param string $certificate certificate basename
      *
      * @return view
      */
 
-    function delete($name = NULL)
+    function delete($certificate = NULL)
     {
-        $confirm_uri = '/app/lets_encrypt/certificate/destroy/' . $name;
+        $confirm_uri = '/app/lets_encrypt/certificate/destroy/' . $certificate;
         $cancel_uri = '/app/lets_encrypt';
-        $items = array($name);
+        $items = array($certificate);
 
         $this->page->view_confirm_delete($confirm_uri, $cancel_uri, $items);
     }
@@ -190,12 +190,12 @@ class Certificate extends ClearOS_Controller
     /**
      * Remove view.
      *
-     * @param string $name certificate basename
+     * @param string $certificate certificate basename
      *
      * @return view
      */
 
-    function destroy($name)
+    function destroy($certificate)
     {
         // Load libraries
         //---------------
@@ -206,7 +206,7 @@ class Certificate extends ClearOS_Controller
         //-------------------
 
         try {
-            $this->lets_encrypt->delete($name);
+            $this->lets_encrypt->delete($certificate);
             $this->page->set_status_deleted();
 
             redirect('/lets_encrypt');
@@ -218,6 +218,9 @@ class Certificate extends ClearOS_Controller
 
     /**
      * View view.
+     *
+     * @param string  $certificate certificate basename
+     * @param boolean $is_new      set to true if certificate is new
      *
      * @return view
      */
@@ -265,6 +268,8 @@ class Certificate extends ClearOS_Controller
     /**
      * Common install/download method.
      *
+     * @param string $certificate certificate basename
+     *
      * @return string certificate
      */
     
@@ -301,7 +306,7 @@ class Certificate extends ClearOS_Controller
     /**
      * Common view/edit form.
      *
-     * @parma string $certificate certificate
+     * @param string $certificate certificate basename
      *
      * @return view
      */

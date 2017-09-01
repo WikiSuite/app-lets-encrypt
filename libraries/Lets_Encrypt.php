@@ -135,9 +135,9 @@ class Lets_Encrypt extends Software
     /**
      * Deletes a certificate.
      *
-     * @param string $email e-mail address to register for updates
-     * @param string $domain primary domain
-     * @param array $domains list of other domains
+     * @param string $email   e-mail address to register for updates
+     * @param string $domain  primary domain
+     * @param array  $domains list of other domains
      *
      * @return void
      */
@@ -179,7 +179,12 @@ class Lets_Encrypt extends Software
         // $test_cert = '';
         $test_cert = '--test-cert';
 
-        $exit_code = $shell->execute(self::COMMAND_CERTBOT, $test_cert . ' --apache --agree-tos -n -m ' . $email . ' -d "' . $domain_param . '" certonly', TRUE, $options);
+        $exit_code = $shell->execute(
+            self::COMMAND_CERTBOT,
+            $test_cert . ' --apache --agree-tos -n -m ' . $email . ' -d "' . $domain_param . '" certonly',
+            TRUE,
+            $options
+        );
 
         if ($exit_code === 0)
             $retval = '';
@@ -388,11 +393,11 @@ class Lets_Encrypt extends Software
     }
 
     /**
-     * Validation routine for primary domain.
+     * Validation routine for domain list.
      *
-     * @param string $domain primary domain
+     * @param string $domains domain list
      *
-     * @return string error message if primary domain is invalid
+     * @return string error message domain list is invalid
      */
 
     public function validate_domains($domains)
