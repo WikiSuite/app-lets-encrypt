@@ -223,6 +223,10 @@ class Lets_Encrypt extends Software
         clearos_profile(__METHOD__, __LINE__);
 
         $folder = new Folder(self::PATH_CERTIFICATES, TRUE);
+
+        if (!$folder->exists())
+            return [];
+
         $certificate_list = $folder->get_listing();
 
         $ssl = new SSL();
