@@ -175,9 +175,9 @@ class Lets_Encrypt extends Software
 
         $shell = new Shell();
 
-        // FIXME: For testing
-        // $test_cert = '';
-        $test_cert = '--test-cert';
+        // For testing
+        $test_cert = '';
+        // $test_cert = '--test-cert';
 
         $exit_code = $shell->execute(
             self::COMMAND_CERTBOT,
@@ -258,7 +258,7 @@ class Lets_Encrypt extends Software
             $base_path = self::PATH_CERTIFICATES . '/' . $certificate . '/';
             $cert_files[$certificate]['certificate-filename'] = $base_path . 'cert.pem';
             $cert_files[$certificate]['key-filename'] = $base_path . 'privkey.pem';
-            $cert_files[$certificate]['intermediate-filename'] = $base_path . 'fullchain.pem';
+            $cert_files[$certificate]['intermediate-filename'] = $base_path . 'chain.pem';
         }
 
         return $cert_files;
