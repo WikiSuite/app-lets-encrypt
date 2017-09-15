@@ -63,7 +63,6 @@ $app['core_file_manifest'] = array(
     ),
 );
 
-
 $app['core_directory_manifest'] = array(
     '/var/clearos/lets_encrypt' => array(),
     '/var/clearos/lets_encrypt/backup' => array(),
