@@ -1,7 +1,7 @@
 
 Name: app-lets-encrypt
 Epoch: 1
-Version: 1.0.2
+Version: 1.0.3
 Release: 1%{dist}
 Summary: Let's Encrypt
 License: GPLv3
