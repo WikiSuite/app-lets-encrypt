@@ -5,7 +5,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'lets_encrypt';
-$app['version'] = '1.0.3';
+$app['version'] = '1.0.5';
 $app['release'] = '1';
 $app['vendor'] = 'WikiSuite';
 $app['packager'] = 'WikiSuite';
@@ -47,6 +47,8 @@ $app['controllers']['certificate']['title'] = lang('lets_encrypt_certificates');
 $app['core_requires'] = array(
     'app-network-core',
     'app-certificate-manager-core >= 1:2.4.0',
+    'app-events-core',
+    'app-tasks-core',
     'certbot',
     'python2-certbot-apache',
 );
@@ -61,11 +63,19 @@ $app['core_file_manifest'] = array(
         'config' => TRUE,
         'config_params' => 'noreplace',
     ),
+    'app-lets-encrypt.cron' => array(
+        'target' => '/etc/cron.d/app-lets-encrypt',
+    ),
+    'lets-encrypt-event'=> array(
+        'target' => '/var/clearos/events/lets_encrypt/lets_encrypt',
+        'mode' => '0755'
+    ),
 );
 
 $app['core_directory_manifest'] = array(
     '/var/clearos/lets_encrypt' => array(),
     '/var/clearos/lets_encrypt/backup' => array(),
+    '/var/clearos/events/lets_encrypt' => array(),
 );
 
 $app['delete_dependency'] = array(

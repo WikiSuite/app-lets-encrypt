@@ -1,0 +1,6 @@
+#!/bin/sh
+
+sleep 10
+
+systemctl condrestart httpd.service
+systemctl condrestart webconfig.service

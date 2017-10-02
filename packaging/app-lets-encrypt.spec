@@ -1,7 +1,7 @@
 
 Name: app-lets-encrypt
 Epoch: 1
-Version: 1.0.3
+Version: 1.0.5
 Release: 1%{dist}
 Summary: Let's Encrypt
 License: GPLv3
@@ -24,6 +24,8 @@ Group: ClearOS/Libraries
 Requires: app-base-core
 Requires: app-network-core
 Requires: app-certificate-manager-core >= 1:2.4.0
+Requires: app-events-core
+Requires: app-tasks-core
 Requires: certbot
 Requires: python2-certbot-apache
 
@@ -40,8 +42,11 @@ This package provides the core API and libraries.
 mkdir -p -m 755 %{buildroot}/usr/clearos/apps/lets_encrypt
 cp -r * %{buildroot}/usr/clearos/apps/lets_encrypt/
 
+install -d -m 0755 %{buildroot}/var/clearos/events/lets_encrypt
 install -d -m 0755 %{buildroot}/var/clearos/lets_encrypt
 install -d -m 0755 %{buildroot}/var/clearos/lets_encrypt/backup
+install -D -m 0644 packaging/app-lets-encrypt.cron %{buildroot}/etc/cron.d/app-lets-encrypt
+install -D -m 0755 packaging/lets-encrypt-event %{buildroot}/var/clearos/events/lets_encrypt/lets_encrypt
 install -D -m 0644 packaging/lets_encrypt.conf %{buildroot}/etc/clearos/lets_encrypt.conf
 
 %post
@@ -82,9 +87,12 @@ exit 0
 %exclude /usr/clearos/apps/lets_encrypt/packaging
 %exclude /usr/clearos/apps/lets_encrypt/unify.json
 %dir /usr/clearos/apps/lets_encrypt
+%dir /var/clearos/events/lets_encrypt
 %dir /var/clearos/lets_encrypt
 %dir /var/clearos/lets_encrypt/backup
 /usr/clearos/apps/lets_encrypt/deploy
 /usr/clearos/apps/lets_encrypt/language
 /usr/clearos/apps/lets_encrypt/libraries
+/etc/cron.d/app-lets-encrypt
+/var/clearos/events/lets_encrypt/lets_encrypt
 %config(noreplace) /etc/clearos/lets_encrypt.conf

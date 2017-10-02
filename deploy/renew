@@ -1,0 +1,24 @@
+#!/bin/sh
+
+#---------------------------------------------------
+# Renew certificates
+#---------------------------------------------------
+
+# The --post-hook flag creates a ClearOS event when a certificate is renewed.
+# Any app can drop a script into /var/clearos/events/lets_encrypt to get a
+# notification when this event triggers.
+
+logger -p local6.notice -t lets_encrypt "certificate renewal check started"
+
+RESULT=`certbot renew --renew-hook "/sbin/trigger lets_encrypt" >/var/clearos/lets_encrypt/renew.log 2>&1`
+
+if [ $? -ne 0 ]; then
+    logger -p local6.notice -t lets_encrypt "certificate renewal check failed"
+else
+    logger -p local6.notice -t lets_encrypt "certificate renewal check succeeded"
+fi
+
+IFS=$'\n'
+for line in `cat /var/clearos/lets_encrypt/renew.log`; do
+    logger -p local6.notice -t lets_encrypt "log: $line"
+done
