@@ -5,7 +5,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'lets_encrypt';
-$app['version'] = '1.0.5';
+$app['version'] = '1.0.6';
 $app['release'] = '1';
 $app['vendor'] = 'WikiSuite';
 $app['packager'] = 'WikiSuite';
