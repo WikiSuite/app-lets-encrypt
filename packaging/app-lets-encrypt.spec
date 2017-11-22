@@ -25,6 +25,7 @@ Requires: app-base-core
 Requires: app-network-core
 Requires: app-certificate-manager-core >= 1:2.4.0
 Requires: app-events-core
+Requires: app-web-server-core
 Requires: app-tasks-core
 Requires: certbot
 Requires: python2-certbot-apache

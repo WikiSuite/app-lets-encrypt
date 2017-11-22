@@ -48,6 +48,7 @@ $app['core_requires'] = array(
     'app-network-core',
     'app-certificate-manager-core >= 1:2.4.0',
     'app-events-core',
+    'app-web-server-core',
     'app-tasks-core',
     'certbot',
     'python2-certbot-apache',
