@@ -166,6 +166,26 @@ class Lets_Encrypt extends Software
         $raw_domains = trim($domain) . ' ' . trim($domains);
         $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
 
+        // Open port 443 on the firewall
+        //------------------------------
+
+        $firewall_state = '';
+
+        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
+            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
+
+            $firewall_state = $firewall->check_port('TCP', 443);
+            echo "state: $firewall_state\n";
+
+            if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
+                $firewall->add_allow_port('lets_encrypt443', 'TCP', 443);
+                sleep(10);
+            } else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED) {
+                $firewall->set_allow_port_state(TRUE, 'TCP', 443);
+                sleep(10);
+            }
+        }
+
         // Run certbot
         //------------
 
@@ -185,6 +205,18 @@ class Lets_Encrypt extends Software
             TRUE,
             $options
         );
+
+        // Undo firewall
+        //--------------
+
+        if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
+            $firewall->delete_allow_port('TCP', 443);
+        } else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED) {
+            $firewall->set_allow_port_state(FALSE, 'TCP', 443);
+        }
+
+        // Return
+        //-------
 
         if ($exit_code === 0)
             $retval = '';
