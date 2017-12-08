@@ -1,6 +1,6 @@
 #!/bin/sh
 
-sleep 10
+sleep 5
 
-systemctl condrestart httpd.service
-systemctl condrestart webconfig.service
+# Certificate manager will manage any necessary restarts
+/sbin/trigger certificate_manager
