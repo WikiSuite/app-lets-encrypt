@@ -139,7 +139,7 @@ class Lets_Encrypt extends Software
      * @param string $domain  primary domain
      * @param array  $domains list of other domains
      *
-     * @return void
+     * @return array error entries if an error occurred.
      */
 
     public function add($email, $domain, $domains)
@@ -175,7 +175,6 @@ class Lets_Encrypt extends Software
             $firewall = new  \clearos\apps\incoming_firewall\Incoming();
 
             $firewall_state = $firewall->check_port('TCP', 443);
-            echo "state: $firewall_state\n";
 
             if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
                 $firewall->add_allow_port('lets_encrypt443', 'TCP', 443);
@@ -219,7 +218,7 @@ class Lets_Encrypt extends Software
         //-------
 
         if ($exit_code === 0)
-            $retval = '';
+            $retval = [];
         else
             $retval = $this->get_log($domain);
 
