@@ -10,7 +10,7 @@
 
 logger -p local6.notice -t lets_encrypt "certificate renewal check started"
 
-RESULT=`certbot renew --preferred-challenges http-01 --renew-hook "/sbin/trigger lets_encrypt" >/var/clearos/lets_encrypt/renew.log 2>&1`
+RESULT=`certbot renew --standalone --preferred-challenges http-01 --renew-hook "/sbin/trigger lets_encrypt" >/var/clearos/lets_encrypt/renew.log 2>&1`
 
 if [ $? -ne 0 ]; then
     logger -p local6.notice -t lets_encrypt "certificate renewal check failed"

@@ -4,3 +4,20 @@
 #--------
 
 /usr/sbin/addsudo /usr/bin/certbot app-lets-encrypt-core
+
+# Tidy up renewals
+#-----------------
+
+if [ ! -e /var/clearos/lets_encrypt/convert_standalone ]; then
+    CONFIGS=`find /etc/letsencrypt/renewal -type f`
+    for CONFIG in $CONFIGS; do
+        CHECK=`grep "^authenticator = apache" $CONFIG`
+        if [ -n "$CHECK" ]; then
+            logger -p local6.notice -t installer "app-lets-encrypt - updating to standalone mode: $CONFIG"
+            sed -i -e 's/^authenticator = apache.*/authenticator = standalone/' $CONFIG
+            sed -i -e 's/^installer = apache.*/installer = None/' $CONFIG
+        fi
+    done
+
+    touch /var/clearos/lets_encrypt/convert_standalone
+fi
