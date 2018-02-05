@@ -8,9 +8,15 @@
 # Any app can drop a script into /var/clearos/events/lets_encrypt to get a
 # notification when this event triggers.
 
+MAX_LOGS="200"
+
+if [ -f /etc/sysconfig/certbot ];then
+    . /etc/sysconfig/certbot
+fi
+
 logger -p local6.notice -t lets_encrypt "certificate renewal check started"
 
-RESULT=`certbot renew --standalone --preferred-challenges http-01 --renew-hook "/sbin/trigger lets_encrypt" >/var/clearos/lets_encrypt/renew.log 2>&1`
+RESULT=`certbot renew --standalone --max-log-backups $MAX_LOGS --preferred-challenges http-01 --renew-hook "/sbin/trigger lets_encrypt" >/var/clearos/lets_encrypt/renew.log 2>&1`
 
 if [ $? -ne 0 ]; then
     logger -p local6.notice -t lets_encrypt "certificate renewal check failed"
