@@ -58,24 +58,29 @@ clearos_load_language('network');
 //--------
 
 use \clearos\apps\base\Configuration_File as Configuration_File;
+use \clearos\apps\base\Daemon as Daemon;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\base\Software as Software;
 use \clearos\apps\certificate_manager\SSL as SSL;
+use \clearos\apps\firewall\Firewall as Firewall;
 use \clearos\apps\network\Network_Utils as Network_Utils;
 
 clearos_load_library('base/Configuration_File');
+clearos_load_library('base/Daemon');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
 clearos_load_library('base/Shell');
 clearos_load_library('base/Software');
 clearos_load_library('certificate_manager/SSL');
+clearos_load_library('firewall/Firewall');
 clearos_load_library('network/Network_Utils');
 
 // Exceptions
 //-----------
 
+use \Exception as Exception;
 use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
 use \clearos\apps\base\Validation_Exception as Validation_Exception;
 
@@ -166,52 +171,91 @@ class Lets_Encrypt extends Software
         $raw_domains = trim($domain) . ' ' . trim($domains);
         $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
 
-        // Open port 443 on the firewall
-        //------------------------------
+        // Open port 80 on the firewall
+        //-----------------------------
 
         $firewall_state = '';
 
         if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
             $firewall = new  \clearos\apps\incoming_firewall\Incoming();
 
-            $firewall_state = $firewall->check_port('TCP', 443);
+            $firewall_state = $firewall->check_port('TCP', 80);
 
             if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
-                $firewall->add_allow_port('lets_encrypt443', 'TCP', 443);
+                $firewall->add_allow_port('lets_encrypt80', 'TCP', 80);
                 sleep(10);
             } else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED) {
-                $firewall->set_allow_port_state(TRUE, 'TCP', 443);
+                $firewall->set_allow_port_state(TRUE, 'TCP', 80);
                 sleep(10);
             }
         }
 
+        // Disable port 80 daemons
+        //------------------------
+
+        $daemon_list = ['httpd', 'nginx'];
+        $daemon_state = [];
+
+        foreach ($daemon_list as $daemon_name) {
+            $daemon = new Daemon($daemon_name);
+            $daemon_state[$daemon_name] = FALSE;
+
+            if ($daemon->is_installed()) {
+                $daemon_state[$daemon_name] = $daemon->get_running_state();
+                $daemon->set_running_state(FALSE);
+            }
+        }
+
+        sleep(2);
+
         // Run certbot
         //------------
 
-        $options['log'] = $log_basename;
-        $options['validate_exit_code'] = FALSE;
-        $options['env'] = 'LANG=en_US';
+        try {
+            $options['log'] = $log_basename;
+            $options['validate_exit_code'] = FALSE;
+            $options['env'] = 'LANG=en_US';
 
-        $shell = new Shell();
+            $shell = new Shell();
 
-        // For testing
-        $test_cert = '';
-        // $test_cert = '--test-cert';
+            // For testing
+            $test_cert = '';
+            // $test_cert = '--test-cert';
 
-        $exit_code = $shell->execute(
-            self::COMMAND_CERTBOT,
-            $test_cert . ' --apache --agree-tos -n -m ' . $email . ' -d "' . $domain_param . '" certonly',
-            TRUE,
-            $options
-        );
+            $exit_code = $shell->execute(
+                self::COMMAND_CERTBOT,
+                $test_cert . ' --standalone --agree-tos -n -m ' . $email . ' -d "' . $domain_param . '" certonly',
+                TRUE,
+                $options
+            );
+        } catch (Exception $e) {
+            $exit_code = 1;
+        }
+
+        // Re-enable port 80 daemons
+        //--------------------------
+
+        foreach ($daemon_state as $daemon_name => $was_running) {
+            $daemon = new Daemon($daemon_name);
+
+            try {
+                if ($was_running)
+                    $daemon->set_running_state(TRUE);
+            } catch (Exception $e) {
+                $exit_code = 1;
+            }
+        }
 
         // Undo firewall
         //--------------
 
-        if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
-            $firewall->delete_allow_port('TCP', 443);
-        } else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED) {
-            $firewall->set_allow_port_state(FALSE, 'TCP', 443);
+        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
+            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
+
+            if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED)
+                $firewall->delete_allow_port('TCP', 80);
+            else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED)
+                $firewall->set_allow_port_state(FALSE, 'TCP', 80);
         }
 
         // Return

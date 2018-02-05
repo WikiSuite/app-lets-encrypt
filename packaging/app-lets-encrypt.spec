@@ -1,7 +1,7 @@
 
 Name: app-lets-encrypt
 Epoch: 1
-Version: 1.0.7
+Version: 1.10.0
 Release: 1%{dist}
 Summary: Let's Encrypt
 License: GPLv3
@@ -23,12 +23,10 @@ License: LGPLv3
 Group: ClearOS/Libraries
 Requires: app-base-core
 Requires: app-network-core
-Requires: app-certificate-manager-core >= 1:2.4.0
+Requires: app-certificate-manager-core >= 1:2.4.10
 Requires: app-events-core
-Requires: app-web-server-core
 Requires: app-tasks-core
-Requires: certbot
-Requires: python2-certbot-apache
+Requires: certbot >= 0.21.0
 
 %description core
 Let's Encrypt is an open certificate authority that provides free SSL certificates.

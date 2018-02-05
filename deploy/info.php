@@ -5,7 +5,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'lets_encrypt';
-$app['version'] = '1.0.7';
+$app['version'] = '1.10.0';
 $app['release'] = '1';
 $app['vendor'] = 'WikiSuite';
 $app['packager'] = 'WikiSuite';
@@ -48,10 +48,8 @@ $app['core_requires'] = array(
     'app-network-core',
     'app-certificate-manager-core >= 1:2.4.10',
     'app-events-core',
-    'app-web-server-core',
     'app-tasks-core',
-    'certbot',
-    'python2-certbot-apache',
+    'certbot >= 0.21.0'
 );
 
 $app['requires'] = array(
