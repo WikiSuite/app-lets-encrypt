@@ -171,6 +171,22 @@ class Lets_Encrypt extends Software
         $raw_domains = trim($domain) . ' ' . trim($domains);
         $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
 
+        // Disable port 80 daemons
+        //------------------------
+
+        $daemon_list = ['httpd', 'nginx'];
+        $daemon_state = [];
+
+        foreach ($daemon_list as $daemon_name) {
+            $daemon = new Daemon($daemon_name);
+            $daemon_state[$daemon_name] = FALSE;
+
+            if ($daemon->is_installed()) {
+                $daemon_state[$daemon_name] = $daemon->get_running_state();
+                $daemon->set_running_state(FALSE);
+            }
+        }
+
         // Open port 80 on the firewall
         //-----------------------------
 
@@ -189,24 +205,6 @@ class Lets_Encrypt extends Software
                 sleep(10);
             }
         }
-
-        // Disable port 80 daemons
-        //------------------------
-
-        $daemon_list = ['httpd', 'nginx'];
-        $daemon_state = [];
-
-        foreach ($daemon_list as $daemon_name) {
-            $daemon = new Daemon($daemon_name);
-            $daemon_state[$daemon_name] = FALSE;
-
-            if ($daemon->is_installed()) {
-                $daemon_state[$daemon_name] = $daemon->get_running_state();
-                $daemon->set_running_state(FALSE);
-            }
-        }
-
-        sleep(2);
 
         // Run certbot
         //------------
@@ -232,6 +230,18 @@ class Lets_Encrypt extends Software
             $exit_code = 1;
         }
 
+        // Undo firewall
+        //--------------
+
+        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
+            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
+
+            if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED)
+                $firewall->delete_allow_port('TCP', 80);
+            else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED)
+                $firewall->set_allow_port_state(FALSE, 'TCP', 80);
+        }
+
         // Re-enable port 80 daemons
         //--------------------------
 
@@ -244,18 +254,6 @@ class Lets_Encrypt extends Software
             } catch (Exception $e) {
                 $exit_code = 1;
             }
-        }
-
-        // Undo firewall
-        //--------------
-
-        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
-            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
-
-            if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED)
-                $firewall->delete_allow_port('TCP', 80);
-            else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED)
-                $firewall->set_allow_port_state(FALSE, 'TCP', 80);
         }
 
         // Return
