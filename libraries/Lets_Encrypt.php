@@ -124,6 +124,7 @@ class Lets_Encrypt extends Software
     protected $is_loaded = FALSE;
     protected $config = array();
     protected $max_logs = 200;
+    protected $daemon_list = ['httpd', 'nginx'];
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -174,59 +175,13 @@ class Lets_Encrypt extends Software
         $raw_domains = trim($domain) . ' ' . trim($domains);
         $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
 
-        // Disable port 80 daemons
-        //------------------------
+        // Manage daemons and firewall on port 80
+        //---------------------------------------
 
-        $daemon_list = ['httpd', 'nginx'];
-        $daemon_state = [];
-
-        foreach ($daemon_list as $daemon_name) {
-            $daemon = new Daemon($daemon_name);
-            $daemon_state[$daemon_name] = FALSE;
-
-            if ($daemon->is_installed()) {
-                $daemon_state[$daemon_name] = $daemon->get_running_state();
-                $daemon->set_running_state(FALSE);
-            }
-        }
-
-        // Open port 80 on the firewall
-        //-----------------------------
-
-        $firewall_state = '';
-        $forwarding_rules = [];
-
-        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
-            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
-
-            $firewall_state = $firewall->check_port('TCP', 80);
-
-            if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
-                $firewall->add_allow_port('lets_encrypt80', 'TCP', 80);
-                sleep(10);
-            } else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED) {
-                $firewall->set_allow_port_state(TRUE, 'TCP', 80);
-                sleep(10);
-            }
-        }
-
-        if (clearos_load_library('port_forwarding/Port_Forwarding')) {
-            $forwarding = new \clearos\apps\port_forwarding\Port_Forwarding();
-
-            $rules = $forwarding->get_ports();
-
-            foreach ($rules as $rule) {
-                if (($rule['from_port'] == 80) && $rule['enabled'])
-                    $forwarding_rules[] = $rule;
-            }
-
-            foreach ($forwarding_rules as $rule)
-                $forwarding->set_port_state(FALSE, $rule['protocol_name'], $rule['from_port'], $rule['to_port'], $rule['to_ip']);
-
-            if (!empty($forwarding_rules))
-                sleep(10);
-        }
-
+        $daemon_states = $this->_disengage_daemons();
+        $incoming_state = $this->_disengage_incoming_firewall();
+        $forwarding_rules = $this->_disengage_port_forwarding();
+        
         // Run certbot
         //------------
 
@@ -239,7 +194,7 @@ class Lets_Encrypt extends Software
 
             // For testing
             $test_cert = '';
-            // $test_cert = '--test-cert';
+            $test_cert = '--test-cert';
 
             $exit_code = $shell->execute(
                 self::COMMAND_CERTBOT,
@@ -251,38 +206,12 @@ class Lets_Encrypt extends Software
             $exit_code = 1;
         }
 
-        // Undo firewall
-        //--------------
+        // Manage daemons and firewall on port 80
+        //---------------------------------------
 
-        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
-            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
-
-            if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED)
-                $firewall->delete_allow_port('TCP', 80);
-            else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED)
-                $firewall->set_allow_port_state(FALSE, 'TCP', 80);
-        }
-
-        if (clearos_load_library('port_forwarding/Port_Forwarding')) {
-            $forwarding = new \clearos\apps\port_forwarding\Port_Forwarding();
-
-            foreach ($forwarding_rules as $rule)
-    $forwarding->set_port_state(TRUE, $rule['protocol_name'], $rule['from_port'], $rule['to_port'], $rule['to_ip']);
-        }
-
-        // Re-enable port 80 daemons
-        //--------------------------
-
-        foreach ($daemon_state as $daemon_name => $was_running) {
-            $daemon = new Daemon($daemon_name);
-
-            try {
-                if ($was_running)
-                    $daemon->set_running_state(TRUE);
-            } catch (Exception $e) {
-                $exit_code = 1;
-            }
-        }
+        $this->_engage_incoming_firewall($incoming_state);
+        $this->_engage_port_forwarding($forwarding_rules);
+        $this->_engage_daemons($daemon_states);
 
         // Return
         //-------
@@ -509,6 +438,16 @@ class Lets_Encrypt extends Software
         if ($auto && !$this->get_auto_renew_state())
             return;
 
+        // Manage daemons and firewall on port 80
+        //---------------------------------------
+
+        $daemon_states = $this->_disengage_daemons();
+        $incoming_state = $this->_disengage_incoming_firewall();
+        $forwarding_rules = $this->_disengage_port_forwarding();
+
+        // Run certbot renew
+        //------------------
+
         $options['validate_exit_code'] = FALSE;
 
         $shell = new Shell();
@@ -529,6 +468,13 @@ class Lets_Encrypt extends Software
 
         foreach ($logs as $log)
             clearos_log('lets_encrypt', $log);
+
+        // Manage daemons and firewall on port 80
+        //---------------------------------------
+
+        $this->_engage_incoming_firewall($incoming_state);
+        $this->_engage_port_forwarding($forwarding_rules);
+        $this->_engage_daemons($daemon_states);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -613,6 +559,170 @@ class Lets_Encrypt extends Software
     ///////////////////////////////////////////////////////////////////////////////
     // P R I V A T E   M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Disengages daemons.
+     *
+     * @access private
+     * @return string pre-existing daemon states
+     * @throws Engine_Exception
+     */
+
+    protected function _disengage_daemons()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $daemon_states = [];
+
+        foreach ($this->daemon_list as $daemon_name) {
+            $daemon = new Daemon($daemon_name);
+            $daemon_states[$daemon_name] = FALSE;
+
+            if ($daemon->is_installed()) {
+                $daemon_states[$daemon_name] = $daemon->get_running_state();
+                $daemon->set_running_state(FALSE);
+            }
+        }
+
+        return $daemon_states;
+    }
+
+    /**
+     * Disengages incoming firewall.
+     *
+     * @access private
+     * @return string pre-existing incoming firewall state
+     * @throws Engine_Exception
+     */
+
+    protected function _disengage_incoming_firewall()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $incoming_state = '';
+
+        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
+            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
+
+            $incoming_state = $firewall->check_port('TCP', 80);
+
+            if ($incoming_state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED) {
+                $firewall->add_allow_port('lets_encrypt80', 'TCP', 80);
+                sleep(5);
+            } else if ($incoming_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED) {
+                $firewall->set_allow_port_state(TRUE, 'TCP', 80);
+                sleep(5);
+            }
+        }
+
+        return $incoming_state;
+    }
+
+    /**
+     * Disengages port forwarding firewall.
+     *
+     * @access private
+     * @return array pre-existing port forward state
+     * @throws Engine_Exception
+     */
+
+    protected function _disengage_port_forwarding()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $forwarding_rules = [];
+
+        if (clearos_load_library('port_forwarding/Port_Forwarding')) {
+            $forwarding = new \clearos\apps\port_forwarding\Port_Forwarding();
+
+            $rules = $forwarding->get_ports();
+
+            foreach ($rules as $rule) {
+                if (($rule['from_port'] == 80) && $rule['enabled'])
+                    $forwarding_rules[] = $rule;
+            }
+
+            foreach ($forwarding_rules as $rule)
+                $forwarding->set_port_state(FALSE, $rule['protocol_name'], $rule['from_port'], $rule['to_port'], $rule['to_ip']);
+
+            if (!empty($forwarding_rules))
+                sleep(10);
+        }
+
+        return $forwarding_rules;
+    }
+
+    /**
+     * Engages daemons
+     *
+     * @param array $states daemon states
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    protected function _engage_daemons($states)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        foreach ($states as $daemon_name => $was_running) {
+            $daemon = new Daemon($daemon_name);
+
+            try {
+                if ($was_running)
+                    $daemon->set_running_state(TRUE);
+            } catch (Exception $e) {
+                $exit_code = 1;
+            }
+        }
+    }
+
+    /**
+     * Engages incoming firewall.
+     *
+     * @param boolean $state incoming state
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    protected function _engage_incoming_firewall($state)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
+            $firewall = new  \clearos\apps\incoming_firewall\Incoming();
+
+            if ($state == \clearos\apps\firewall\Firewall::CONSTANT_NOT_CONFIGURED)
+                $firewall->delete_allow_port('TCP', 80);
+            else if ($state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED)
+                $firewall->set_allow_port_state(FALSE, 'TCP', 80);
+        }
+    }
+
+    /**
+     * Engages port forwarding firewall.
+     *
+     * @param array $rules port forwarding rules
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    protected function _engage_port_forwarding($rules)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        if (clearos_load_library('port_forwarding/Port_Forwarding')) {
+            $forwarding = new \clearos\apps\port_forwarding\Port_Forwarding();
+
+            foreach ($rules as $rule)
+                $forwarding->set_port_state(TRUE, $rule['protocol_name'], $rule['from_port'], $rule['to_port'], $rule['to_ip']);
+        }
+    }
 
     /**
      * Loads configuration files.
