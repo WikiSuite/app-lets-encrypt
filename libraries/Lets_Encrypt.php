@@ -191,6 +191,7 @@ class Lets_Encrypt extends Software
         //-----------------------------
 
         $firewall_state = '';
+        $forwarding_rules = [];
 
         if (clearos_load_library('incoming_firewall/Incoming') && clearos_load_library('firewall/Firewall')) {
             $firewall = new  \clearos\apps\incoming_firewall\Incoming();
@@ -204,6 +205,23 @@ class Lets_Encrypt extends Software
                 $firewall->set_allow_port_state(TRUE, 'TCP', 80);
                 sleep(10);
             }
+        }
+
+        if (clearos_load_library('port_forwarding/Port_Forwarding')) {
+            $forwarding = new \clearos\apps\port_forwarding\Port_Forwarding();
+
+            $rules = $forwarding->get_ports();
+
+            foreach ($rules as $rule) {
+                if (($rule['from_port'] == 80) && $rule['enabled'])
+                    $forwarding_rules[] = $rule;
+            }
+
+            foreach ($forwarding_rules as $rule)
+                $forwarding->set_port_state(FALSE, $rule['protocol_name'], $rule['from_port'], $rule['to_port'], $rule['to_ip']);
+
+            if (!empty($forwarding_rules))
+                sleep(10);
         }
 
         // Run certbot
@@ -240,6 +258,13 @@ class Lets_Encrypt extends Software
                 $firewall->delete_allow_port('TCP', 80);
             else if ($firewall_state == \clearos\apps\firewall\Firewall::CONSTANT_DISABLED)
                 $firewall->set_allow_port_state(FALSE, 'TCP', 80);
+        }
+
+        if (clearos_load_library('port_forwarding/Port_Forwarding')) {
+            $forwarding = new \clearos\apps\port_forwarding\Port_Forwarding();
+
+            foreach ($forwarding_rules as $rule)
+    $forwarding->set_port_state(TRUE, $rule['protocol_name'], $rule['from_port'], $rule['to_port'], $rule['to_ip']);
         }
 
         // Re-enable port 80 daemons
