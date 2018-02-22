@@ -194,7 +194,7 @@ class Lets_Encrypt extends Software
 
             // For testing
             $test_cert = '';
-            $test_cert = '--test-cert';
+            // $test_cert = '--test-cert';
 
             $exit_code = $shell->execute(
                 self::COMMAND_CERTBOT,
@@ -494,6 +494,7 @@ class Lets_Encrypt extends Software
         clearos_profile(__METHOD__, __LINE__);
 
         $options['validate_exit_code'] = FALSE;
+        $options['env'] = "LANG=en_US";
         $shell = new Shell();
 
         $retval = $shell->execute(
