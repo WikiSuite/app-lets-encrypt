@@ -64,7 +64,6 @@ use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\base\Software as Software;
 use \clearos\apps\certificate_manager\SSL as SSL;
-use \clearos\apps\firewall\Firewall as Firewall;
 use \clearos\apps\network\Network_Utils as Network_Utils;
 
 clearos_load_library('base/Configuration_File');
@@ -74,16 +73,19 @@ clearos_load_library('base/Folder');
 clearos_load_library('base/Shell');
 clearos_load_library('base/Software');
 clearos_load_library('certificate_manager/SSL');
-clearos_load_library('firewall/Firewall');
 clearos_load_library('network/Network_Utils');
 
 // Exceptions
 //-----------
 
 use \Exception as Exception;
+use \clearos\apps\base\Engine_Exception as Engine_Exception;
+use \clearos\apps\base\File_No_Match_Exception as File_No_Match_Exception;
 use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
 use \clearos\apps\base\Validation_Exception as Validation_Exception;
 
+clearos_load_library('base/Engine_Exception');
+clearos_load_library('base/File_No_Match_Exception');
 clearos_load_library('base/File_Not_Found_Exception');
 clearos_load_library('base/Validation_Exception');
 
@@ -109,11 +111,11 @@ class Lets_Encrypt extends Software
     // C O N S T A N T S
     ///////////////////////////////////////////////////////////////////////////////
 
-    const APP_CONFIG = '/etc/clearos/lets_encrypt.conf';
     const PATH_CERTIFICATES = '/etc/letsencrypt/live';
     const COMMAND_CERTBOT = '/usr/bin/certbot';
     const FILE_CERT = 'cert.pem';
     const FILE_LOG_PREFIX = 'lets-encrypt-';
+    const FILE_APP_CONFIG = '/etc/clearos/lets_encrypt.conf';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -121,6 +123,7 @@ class Lets_Encrypt extends Software
 
     protected $is_loaded = FALSE;
     protected $config = array();
+    protected $max_logs = 200;
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -311,6 +314,33 @@ class Lets_Encrypt extends Software
     }
 
     /**
+     * Returns auto-configure state.
+     *
+     * @return boolean state of auto-configure mode
+     */
+
+    public function get_auto_renew_state()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        try {
+            $file = new File(self::FILE_APP_CONFIG);
+            $value = $file->lookup_value("/^auto_renew\s*=\s*/i");
+        } catch (File_Not_Found_Exception $e) {
+            return TRUE;
+        } catch (File_No_Match_Exception $e) {
+            return TRUE;
+        } catch (Exception $e) {
+            throw new Engine_Exception($e->get_message());
+        }
+
+        if (preg_match('/yes/i', $value))
+            return TRUE;
+        else
+            return FALSE;
+    }
+
+    /**
      * Returns a list of certificates.
      *
      * @return array a list of certificates
@@ -460,6 +490,47 @@ class Lets_Encrypt extends Software
         $this->_set_parameter('email', $email);
     }
 
+    /**
+     * Renews certificates.
+     *
+     * The basically runs "certbot renew" but does some firewall,
+     * Apache, and NGINX checks.
+     *
+     * @param boolean $auto flag is renew is called automatically via cron
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    public function renew($auto = FALSE)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        if ($auto && !$this->get_auto_renew_state())
+            return;
+
+        $options['validate_exit_code'] = FALSE;
+
+        $shell = new Shell();
+        $retval = $shell->execute(
+            self::COMMAND_CERTBOT,
+            'renew --standalone ' .
+            '--max-log-backups ' . $this->max_logs . ' ' .
+            '--preferred-challenges http-01 ' .
+            '--renew-hook "/sbin/trigger lets_encrypt"',
+            TRUE,
+            $options
+        );
+
+        $message =($retval == 0) ? lang('lets_encrypt_renew_succeeded') : lang('lets_encrypt_renew_failed');
+        $logs = $shell->get_output();
+
+        clearos_log('lets_encrypt', $message);
+
+        foreach ($logs as $log)
+            clearos_log('lets_encrypt', $log);
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N  M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
@@ -556,7 +627,7 @@ class Lets_Encrypt extends Software
         clearos_profile(__METHOD__, __LINE__);
 
         try {
-            $config_file = new Configuration_File(self::APP_CONFIG);
+            $config_file = new Configuration_File(self::FILE_APP_CONFIG);
             $this->config = $config_file->load();
         } catch (File_Not_Found_Exception $e) {
             // Not fatal
@@ -582,7 +653,7 @@ class Lets_Encrypt extends Software
 
         $this->is_loaded = FALSE;
 
-        $file = new File(self::APP_CONFIG);
+        $file = new File(self::FILE_APP_CONFIG);
 
         if (! $file->exists())
             $file->create("root", "root", "0644");

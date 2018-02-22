@@ -13,3 +13,5 @@ $lang['lets_encrypt_other_domains'] = 'Other Domains';
 $lang['lets_encrypt_domain_list_invalid'] = 'Domain list is invalid.';
 $lang['lets_encrypt_certificate_created'] = 'Certificate Created';
 $lang['lets_encrypt_certificate_created_help'] = 'Your SSL certificate was created!  Details are below.';
+$lang['lets_encrypt_renew_failed'] = 'Certificate renewal check failed.';
+$lang['lets_encrypt_renew_succeeded'] = 'Certificate renewal check succeeded.';

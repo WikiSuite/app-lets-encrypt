@@ -1,30 +1,52 @@
-#!/bin/sh
+#!/usr/clearos/sandbox/usr/bin/php
+<?php
 
-#---------------------------------------------------
-# Renew certificates
-#---------------------------------------------------
+/**
+ * Let's Encrypt renew wrapper.
+ *
+ * @category   apps
+ * @package    lets-encrypt
+ * @subpackage scripts
+ * @author     eGloo <developer@egloo.ca>
+ * @copyright  2017 Marc Laporte
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
+ * @link       https://github.com/WikiSuite/app-lets-encrypt
+ */
 
-# The --post-hook flag creates a ClearOS event when a certificate is renewed.
-# Any app can drop a script into /var/clearos/events/lets_encrypt to get a
-# notification when this event triggers.
+///////////////////////////////////////////////////////////////////////////////
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+///////////////////////////////////////////////////////////////////////////////
 
-MAX_LOGS="200"
+///////////////////////////////////////////////////////////////////////////////
+// B O O T S T R A P
+///////////////////////////////////////////////////////////////////////////////
 
-if [ -f /etc/sysconfig/certbot ];then
-    . /etc/sysconfig/certbot
-fi
+$bootstrap = getenv('CLEAROS_BOOTSTRAP') ? getenv('CLEAROS_BOOTSTRAP') : '/usr/clearos/framework/shared';
+require_once $bootstrap . '/bootstrap.php';
 
-logger -p local6.notice -t lets_encrypt "certificate renewal check started"
+///////////////////////////////////////////////////////////////////////////////
+// D E P E N D E N C I E S
+///////////////////////////////////////////////////////////////////////////////
 
-RESULT=`certbot renew --standalone --max-log-backups $MAX_LOGS --preferred-challenges http-01 --renew-hook "/sbin/trigger lets_encrypt" >/var/clearos/lets_encrypt/renew.log 2>&1`
+use \clearos\apps\lets_encrypt\Lets_Encrypt as Lets_Encrypt;
+clearos_load_library('lets_encrypt/Lets_Encrypt');
 
-if [ $? -ne 0 ]; then
-    logger -p local6.notice -t lets_encrypt "certificate renewal check failed"
-else
-    logger -p local6.notice -t lets_encrypt "certificate renewal check succeeded"
-fi
+///////////////////////////////////////////////////////////////////////////////
+// M A I N
+///////////////////////////////////////////////////////////////////////////////
 
-IFS=$'\n'
-for line in `cat /var/clearos/lets_encrypt/renew.log`; do
-    logger -p local6.notice -t lets_encrypt "log: $line"
-done
+$le = new Lets_Encrypt();
+$le->renew(TRUE);
