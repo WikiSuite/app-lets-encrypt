@@ -15,3 +15,4 @@ $lang['lets_encrypt_certificate_created'] = 'Certificate Created';
 $lang['lets_encrypt_certificate_created_help'] = 'Your SSL certificate was created!  Details are below.';
 $lang['lets_encrypt_renew_failed'] = 'Certificate renewal check failed.';
 $lang['lets_encrypt_renew_succeeded'] = 'Certificate renewal check succeeded.';
+$lang['lets_encrypt_renew_not_required'] = 'Certificate renewal not required - nothing due for renewal.';

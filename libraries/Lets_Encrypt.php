@@ -438,6 +438,11 @@ class Lets_Encrypt extends Software
         if ($auto && !$this->get_auto_renew_state())
             return;
 
+        if (!$this->renew_required()) {
+            clearos_log('lets_encrypt', lang('lets_encrypt_renew_not_required'));
+            return;
+        }
+
         // Manage daemons and firewall on port 80
         //---------------------------------------
 
@@ -449,8 +454,8 @@ class Lets_Encrypt extends Software
         //------------------
 
         $options['validate_exit_code'] = FALSE;
-
         $shell = new Shell();
+
         $retval = $shell->execute(
             self::COMMAND_CERTBOT,
             'renew --standalone ' .
@@ -475,6 +480,40 @@ class Lets_Encrypt extends Software
         $this->_engage_incoming_firewall($incoming_state);
         $this->_engage_port_forwarding($forwarding_rules);
         $this->_engage_daemons($daemon_states);
+    }
+
+    /**
+     * Checks to see if a renewal is required.
+     *
+     * @return boolean TRUE if renewal required
+     * @throws Engine_Exception
+     */
+
+    public function renew_required()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $options['validate_exit_code'] = FALSE;
+        $shell = new Shell();
+
+        $retval = $shell->execute(
+            self::COMMAND_CERTBOT,
+            'renew --standalone ' .
+            '--preferred-challenges http-01 ',
+            TRUE,
+            $options
+        );
+
+        $logs = $shell->get_output();
+
+        foreach ($logs as $log) {
+            // TODO: checking the output for this status is not ideal.
+            // If the text changes, this method will fall back to always trying a renewal.
+            if (preg_match('/No renewals were attempted/', $log))
+                return FALSE;
+        }
+
+        return TRUE;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
