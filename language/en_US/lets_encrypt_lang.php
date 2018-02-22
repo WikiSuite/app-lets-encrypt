@@ -16,3 +16,4 @@ $lang['lets_encrypt_certificate_created_help'] = 'Your SSL certificate was creat
 $lang['lets_encrypt_renew_failed'] = 'Certificate renewal check failed.';
 $lang['lets_encrypt_renew_succeeded'] = 'Certificate renewal check succeeded.';
 $lang['lets_encrypt_renew_not_required'] = 'Certificate renewal not required - nothing due for renewal.';
+$lang['lets_encrypt_connection_refused_warning'] = 'It looks like the Let\'s Encrypt system failed to connect to your system to verify the domains.  Please read the documentation for troubleshooting tips!  The details of the connection failure are below.';

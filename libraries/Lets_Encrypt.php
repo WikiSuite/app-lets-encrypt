@@ -216,12 +216,20 @@ class Lets_Encrypt extends Software
         // Return
         //-------
 
-        if ($exit_code === 0)
-            $retval = [];
-        else
-            $retval = $this->get_log($domain);
+        if ($exit_code === 0) {
+            $log_entries = [];
+        } else {
+            $log_entries = $this->get_log($domain);
 
-        return $retval;
+            foreach ($log_entries as $log) {
+                if (preg_match('/Connection refused/', $log)) {
+                    array_unshift($log_entries, lang('lets_encrypt_connection_refused_warning'), '', '');
+                    return $log_entries;
+                }
+            }
+        }
+
+        return $log_entries;
     }
 
     /**
