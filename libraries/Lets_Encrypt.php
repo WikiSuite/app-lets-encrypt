@@ -505,6 +505,7 @@ class Lets_Encrypt extends Software
         $options['env'] = "LANG=en_US";
         $shell = new Shell();
 
+        // FIXME: add max-logs.  Also consider adding it to other certbot commands
         $retval = $shell->execute(
             self::COMMAND_CERTBOT,
             'renew --standalone ' .
