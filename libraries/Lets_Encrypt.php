@@ -328,6 +328,7 @@ class Lets_Encrypt extends Software
             $cert_files[$certificate]['certificate-filename'] = $base_path . 'cert.pem';
             $cert_files[$certificate]['key-filename'] = $base_path . 'privkey.pem';
             $cert_files[$certificate]['intermediate-filename'] = $base_path . 'chain.pem';
+            $cert_files[$certificate]['fullchain-filename'] = $base_path . 'fullchain.pem';
         }
 
         return $cert_files;
