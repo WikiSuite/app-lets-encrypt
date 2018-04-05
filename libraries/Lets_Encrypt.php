@@ -192,9 +192,11 @@ class Lets_Encrypt extends Software
 
             $shell = new Shell();
 
-            // For testing
             $test_cert = '';
-            // $test_cert = '--test-cert';
+
+            // Devel environments run on port 1501.  Default to test mode.
+            if (!empty($_SERVER['SERVER_PORT']) && ($_SERVER['SERVER_PORT'] == 1501))
+                $test_cert = '--test-cert';
 
             $exit_code = $shell->execute(
                 self::COMMAND_CERTBOT,
