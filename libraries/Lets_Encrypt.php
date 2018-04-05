@@ -172,6 +172,7 @@ class Lets_Encrypt extends Software
         // Generate domain list
         //---------------------
 
+        $domains = preg_replace('/,/', ' ', $domains); // Strip commas, re-add below
         $raw_domains = trim($domain) . ' ' . trim($domains);
         $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
 
