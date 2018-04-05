@@ -5,7 +5,7 @@ Version: 1.10.6
 Release: 1%{dist}
 Summary: Let's Encrypt
 License: GPLv3
-Group: ClearOS/Apps
+Group: Applications/Apps
 Packager: WikiSuite
 Vendor: WikiSuite
 Source: %{name}-%{version}.tar.gz
@@ -18,9 +18,9 @@ Requires: app-certificate-manager
 Let's Encrypt is an open certificate authority that provides free SSL certificates.
 
 %package core
-Summary: Let's Encrypt - Core
+Summary: Let's Encrypt - API
 License: LGPLv3
-Group: ClearOS/Libraries
+Group: Applications/API
 Requires: app-base-core
 Requires: app-network-core
 Requires: app-certificate-manager-core >= 1:2.4.10
