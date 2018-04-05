@@ -106,15 +106,6 @@ class Certificate extends ClearOS_Controller
 
         if ($this->input->post('submit') && $form_ok) {
             try {
-                /*
-                $this->lets_encrypt->add(
-                    $this->input->post('email'),
-                    $this->input->post('domain'),
-                    $this->input->post('domains'),
-                    TRUE
-                );
-                */
-
                 $data['provisioning'] = TRUE;
                 $data['domain'] = $this->input->post('domain');
                 $data['domains'] = $this->input->post('domains');
