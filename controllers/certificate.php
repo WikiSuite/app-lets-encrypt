@@ -7,9 +7,9 @@
  * @package    lets-encrypt
  * @subpackage controllers
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
+ * @copyright  2017-2018 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       https://github.com/eglooca/app-lets-encrypt
+ * @link       https://github.com/WikiSuite/app-lets-encrypt
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,9 +40,9 @@
  * @package    lets-encrypt
  * @subpackage controllers
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
+ * @copyright  2017-2018 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       https://github.com/eglooca/app-lets-encrypt
+ * @link       https://github.com/WikiSuite/app-lets-encrypt
  */
 
 class Certificate extends ClearOS_Controller
@@ -59,13 +59,13 @@ class Certificate extends ClearOS_Controller
         //------------------
 
         $this->lang->load('lets_encrypt');
-        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('lets_encrypt/Certificates_Class');
 
         // Load view data
         //---------------
 
         try {
-            $data['certificates'] = $this->lets_encrypt->get_certificates();
+            $data['certificates'] = $this->certificates_class->listing();
         } catch (Engine_Engine_Exception $e) {
             $this->page->view_exception($e);
             return;
@@ -89,14 +89,15 @@ class Certificate extends ClearOS_Controller
         //------------------
 
         $this->lang->load('lets_encrypt');
-        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('lets_encrypt/Certificates_Class');
+        $this->load->library('lets_encrypt/Lets_Encrypt_Class');
 
         // Set validation rules
         //---------------------
 
-        $this->form_validation->set_policy('email', 'lets_encrypt/Lets_Encrypt', 'validate_email', TRUE);
-        $this->form_validation->set_policy('domain', 'lets_encrypt/Lets_Encrypt', 'validate_domain', TRUE);
-        $this->form_validation->set_policy('domains', 'lets_encrypt/Lets_Encrypt', 'validate_domains');
+        $this->form_validation->set_policy('email', 'lets_encrypt/Certificates_Class', 'validate_email', TRUE);
+        $this->form_validation->set_policy('domain', 'lets_encrypt/Certificates_Class', 'validate_domain', TRUE);
+        $this->form_validation->set_policy('domains', 'lets_encrypt/Certificates_Class', 'validate_domains');
         $form_ok = $this->form_validation->run();
 
         // Handle form submit
@@ -121,7 +122,7 @@ class Certificate extends ClearOS_Controller
         //---------------
 
         try {
-            $data['email'] = $this->lets_encrypt->get_email();
+            $data['email'] = $this->lets_encrypt_class->get_email();
         } catch (Engine_Engine_Exception $e) {
             $this->page->view_exception($e);
             return;
@@ -145,12 +146,12 @@ class Certificate extends ClearOS_Controller
         //------------------
 
         $this->lang->load('lets_encrypt');
-        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('lets_encrypt/Certificates_Class');
 
         // Add certificate
         //----------------
 
-        $error = $this->lets_encrypt->add(
+        $error = $this->certificates_class->create(
             $this->input->post('email'),
             $this->input->post('domain'),
             $this->input->post('domains')
@@ -191,13 +192,13 @@ class Certificate extends ClearOS_Controller
         // Load libraries
         //---------------
 
-        $this->load->library('Lets_Encrypt');
+        $this->load->library('Certificates_Class');
 
         // Handle form submit
         //-------------------
 
         try {
-            $this->lets_encrypt->delete($certificate);
+            $this->lets_encrypt_class->delete($certificate);
             $this->page->set_status_deleted();
 
             redirect('/lets_encrypt');
@@ -222,8 +223,8 @@ class Certificate extends ClearOS_Controller
         //------------------
 
         $this->lang->load('lets_encrypt');
-        $this->load->library('lets_encrypt/Lets_Encrypt');
-        $this->load->library('certificate_manager/Certificate_Manager');
+        $this->load->library('lets_encrypt/Certificates_Class');
+        $this->load->library('certificate_manager/Certificate_Store');
 
         // Load view data
         //---------------
@@ -234,15 +235,15 @@ class Certificate extends ClearOS_Controller
 
             if ($form_type === 'add') {
             } else {
-                $attributes = $this->lets_encrypt->get_certificate_attributes($certificate);
+                $attributes = $this->certificates_class->get($certificate);
 
-                $data['issued'] = $attributes['issued'];
-                $data['expires'] = $attributes['expires'];
-                $data['key_size'] = $attributes['key_size'];
-                $data['domains'] = $attributes['domains'];
-                $data['details'] = $attributes['details'];
+                $data['issued'] = $attributes['certificate']['issued'];
+                $data['expires'] = $attributes['certificate']['expires'];
+                $data['key_size'] = $attributes['certificate']['key_size'];
+                $data['domains'] = $attributes['certificate']['domains'];
+                $data['details'] = $attributes['certificate']['details'];
 
-                $data['state'] = $this->certificate_manager->get_state($certificate);
+                $data['state'] = $this->certificate_store->get_state($certificate);
                 $data['is_new'] = $is_new;
             }
         } catch (Exception $e) {
@@ -269,13 +270,13 @@ class Certificate extends ClearOS_Controller
         // Load dependencies
         //------------------
 
-        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('lets_encrypt/Certificates_Class');
 
         // Load view data
         //---------------
 
         try {
-            $attributes = $this->lets_encrypt->get_certificate_attributes($certificate);
+            $attributes = $this->lets_encrypt_class->get_certificate_attributes($certificate);
         } catch (Engine_Exception $e) {
             $this->page->view_exception($e);
             return;
@@ -307,7 +308,7 @@ class Certificate extends ClearOS_Controller
         // Load dependencies
         //------------------
 
-        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('lets_encrypt/Certificates_Class');
 
         // Grab data
         //----------

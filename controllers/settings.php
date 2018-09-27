@@ -7,9 +7,9 @@
  * @package    lets-encrypt
  * @subpackage controllers
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
+ * @copyright  2017-2018 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       https://github.com/eglooca/app-lets-encrypt
+ * @link       https://github.com/WikiSuite/app-lets-encrypt
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,9 +40,9 @@
  * @package    lets-encrypt
  * @subpackage controllers
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
+ * @copyright  2017-2018 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       https://github.com/eglooca/app-lets-encrypt
+ * @link       https://github.com/WikiSuite/app-lets-encrypt
  */
 
 class Settings extends ClearOS_Controller
@@ -94,12 +94,12 @@ class Settings extends ClearOS_Controller
         //------------------
 
         $this->lang->load('lets_encrypt');
-        $this->load->library('lets_encrypt/Lets_Encrypt');
+        $this->load->library('lets_encrypt/Lets_Encrypt_Class');
 
         // Set validation rules
         //---------------------
 
-        $this->form_validation->set_policy('email', 'lets_encrypt/Lets_Encrypt', 'validate_email', TRUE);
+        $this->form_validation->set_policy('email', 'lets_encrypt/Lets_Encrypt_Class', 'validate_email', TRUE);
         $form_ok = $this->form_validation->run();
 
         // Handle form submit
@@ -107,7 +107,7 @@ class Settings extends ClearOS_Controller
 
         if ($this->input->post('submit') && $form_ok) {
             try {
-                $this->lets_encrypt->set_email($this->input->post('email'));
+                $this->lets_encrypt_class->set_email($this->input->post('email'));
 
                 $this->page->set_status_updated();
                 redirect('/lets_encrypt/settings');
@@ -122,7 +122,7 @@ class Settings extends ClearOS_Controller
 
         try {
             $data['form_type'] = $form_type;
-            $data['email'] = $this->lets_encrypt->get_email();
+            $data['email'] = $this->lets_encrypt_class->get_email();
         } catch (Exception $e) {
             $this->page->view_exception($e);
             return;

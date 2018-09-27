@@ -7,8 +7,8 @@
  * @package    lets-encrypt
  * @subpackage controllers
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
- * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
+ * @copyright  2017-2018 Marc Laporte
+ * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       https://github.com/eglooca/app-lets-encrypt
  */
 
@@ -100,12 +100,12 @@ clearos_load_library('base/Validation_Exception');
  * @package    lets-encrypt
  * @subpackage controllers
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
- * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
+ * @copyright  2017-2018 Marc Laporte
+ * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       https://github.com/eglooca/app-lets-encrypt
  */
 
-class Lets_Encrypt extends Software
+class Lets_Encrypt_Class extends Software
 {
     ///////////////////////////////////////////////////////////////////////////////
     // C O N S T A N T S
@@ -113,7 +113,6 @@ class Lets_Encrypt extends Software
 
     const PATH_CERTIFICATES = '/etc/letsencrypt/live';
     const COMMAND_CERTBOT = '/usr/bin/certbot';
-    const FILE_CERT = 'cert.pem';
     const FILE_LOG_PREFIX = 'lets-encrypt-';
     const FILE_APP_CONFIG = '/etc/clearos/lets_encrypt.conf';
 
@@ -124,7 +123,7 @@ class Lets_Encrypt extends Software
     protected $is_loaded = FALSE;
     protected $config = array();
     protected $max_logs = 200;
-    protected $daemon_list = ['httpd', 'nginx'];
+    public $daemon_list = ['httpd', 'nginx'];
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -142,121 +141,12 @@ class Lets_Encrypt extends Software
     }
 
     /**
-     * Deletes a certificate.
+     * Returns auto-renew state.
      *
-     * @param string $email   e-mail address to register for updates
-     * @param string $domain  primary domain
-     * @param array  $domains list of other domains
+     * By default, auto renewals are enabled.  However, this behavior can
+     * be changed via configuration file.
      *
-     * @return array error entries if an error occurred.
-     */
-
-    public function add($email, $domain, $domains)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_email($email));
-        Validation_Exception::is_valid($this->validate_domain($domain));
-        if (!empty($domains))
-            Validation_Exception::is_valid($this->validate_domains($domains));
-
-        // Delete old log output file
-        //---------------------------
-
-        $log_basename = self::FILE_LOG_PREFIX . $domain . '.log';
-
-        $log = new File(CLEAROS_TEMP_DIR . '/' . $log_basename, TRUE);
-        if ($log->exists())
-            $log->delete();
-
-        // Generate domain list
-        //---------------------
-
-        $domains = preg_replace('/,/', ' ', $domains); // Strip commas, re-add below
-        $raw_domains = trim($domain) . ' ' . trim($domains);
-        $domain_param = preg_replace('/\s+/', ',', trim($raw_domains));
-
-        // Manage daemons and firewall on port 80
-        //---------------------------------------
-
-        $daemon_states = $this->_disengage_daemons();
-        $incoming_state = $this->_disengage_incoming_firewall();
-        $forwarding_rules = $this->_disengage_port_forwarding();
-        
-        // Run certbot
-        //------------
-
-        try {
-            $options['log'] = $log_basename;
-            $options['validate_exit_code'] = FALSE;
-            $options['env'] = 'LANG=en_US';
-
-            $shell = new Shell();
-
-            $test_cert = '';
-
-            // Devel environments run on port 1501.  Default to test mode.
-            if (!empty($_SERVER['SERVER_PORT']) && ($_SERVER['SERVER_PORT'] == 1501))
-                $test_cert = '--test-cert';
-
-            $exit_code = $shell->execute(
-                self::COMMAND_CERTBOT,
-                $test_cert . ' --standalone --agree-tos -n -m ' . $email . ' -d "' . $domain_param . '" certonly',
-                TRUE,
-                $options
-            );
-        } catch (Exception $e) {
-            $exit_code = 1;
-        }
-
-        // Manage daemons and firewall on port 80
-        //---------------------------------------
-
-        $this->_engage_incoming_firewall($incoming_state);
-        $this->_engage_port_forwarding($forwarding_rules);
-        $this->_engage_daemons($daemon_states);
-
-        // Return
-        //-------
-
-        if ($exit_code === 0) {
-            $log_entries = [];
-        } else {
-            $log_entries = $this->get_log($domain);
-
-            foreach ($log_entries as $log) {
-                if (preg_match('/Connection refused/', $log)) {
-                    array_unshift($log_entries, lang('lets_encrypt_connection_refused_warning'), '', '');
-                    return $log_entries;
-                }
-            }
-        }
-
-        return $log_entries;
-    }
-
-    /**
-     * Deletes a certificate.
-     *
-     * @param string $name ceritificate name
-     *
-     * @return void
-     */
-
-    public function delete($name)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_certificate_name($name));
-
-        $shell = new Shell();
-        $shell->execute(self::COMMAND_CERTBOT, 'delete --cert-name ' . $name, TRUE);
-    }
-
-    /**
-     * Returns auto-configure state.
-     *
-     * @return boolean state of auto-configure mode
+     * @return boolean state of auto-renew state
      */
 
     public function get_auto_renew_state()
@@ -281,82 +171,6 @@ class Lets_Encrypt extends Software
     }
 
     /**
-     * Returns a list of certificates.
-     *
-     * @return array a list of certificates
-     */
-
-    public function get_certificates()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $folder = new Folder(self::PATH_CERTIFICATES, TRUE);
-
-        if (!$folder->exists())
-            return [];
-
-        $certificate_list = $folder->get_listing();
-
-        $ssl = new SSL();
-
-        $certs = [];
-
-        foreach ($certificate_list as $certificate)
-            $certs[$certificate] = $ssl->get_certificate_attributes(self::PATH_CERTIFICATES . '/' . $certificate . '/' . self::FILE_CERT);
-
-        return $certs;
-    }
-
-    /**
-     * Returns a list of certificates.
-     *
-     * @return array a list of certificates
-     */
-
-    public function get_certificate_files()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $folder = new Folder(self::PATH_CERTIFICATES, TRUE);
-
-        if (!$folder->exists())
-            return [];
-
-        $certificate_list = $folder->get_listing();
-
-        $cert_files = [];
-
-        foreach ($certificate_list as $certificate) {
-            $base_path = self::PATH_CERTIFICATES . '/' . $certificate . '/';
-            $cert_files[$certificate]['certificate-filename'] = $base_path . 'cert.pem';
-            $cert_files[$certificate]['key-filename'] = $base_path . 'privkey.pem';
-            $cert_files[$certificate]['intermediate-filename'] = $base_path . 'chain.pem';
-            $cert_files[$certificate]['fullchain-filename'] = $base_path . 'fullchain.pem';
-        }
-
-        return $cert_files;
-    }
-
-    /**
-     * Returns certificate attributes.
-     *
-     * @param string $certificate certificate basename
-     *
-     * @return array list of certificate attributes
-     * @throws Certificate_Not_Found_Exception, Engine_Exception
-     */
-
-
-    public function get_certificate_attributes($certificate)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $ssl = new SSL();
-
-        return $ssl->get_certificate_attributes(self::PATH_CERTIFICATES . '/' . $certificate . '/' . self::FILE_CERT);
-    }
-
-    /**
      * Returns the admin e-mail address.
      *
      * @return string admin e-mail address
@@ -375,69 +189,12 @@ class Lets_Encrypt extends Software
     }
 
     /**
-     * Returns array of log lines.
-     *
-     * @param string $certificate certificate basename
-     *
-     * @return array log lines
-     * @throws Engine_Exception
-     */
-
-    public function get_log($certificate)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $log_basename = self::FILE_LOG_PREFIX . $certificate . '.log';
-
-        $log = new File(CLEAROS_TEMP_DIR . '/' . $log_basename);
-        if (!$log->exists())
-            return [];
-
-        $lines = $log->get_contents_as_array();
-
-        $important = [];
-        $important_found = FALSE;
-
-        foreach ($lines as $line) {
-            // KLUDGE: trying to extract only the good stuff
-            if ($important_found)
-                $important[] = $line;
-
-            if (preg_match('/IMPORTANT NOTES:/', $line))
-                $important_found = TRUE;
-        }
-
-        if (empty($important))
-            $important = $lines;
-
-        return $important;
-    }
-
-    /**
-     * Sets the admin e-mail address.
-     *
-     * @param string $email admin e-mail address
-     *
-     * @return void
-     * @throws Engine_Exception
-     */
-
-    public function set_email($email)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_email($email));
-
-        $this->_set_parameter('email', $email);
-    }
-
-    /**
      * Renews certificates.
      *
      * The basically runs "certbot renew" but does some firewall,
      * Apache, and NGINX checks.
      *
-     * @param boolean $auto flag is renew is called automatically via cron
+     * @param boolean $auto flag is set if called via default cron
      *
      * @return void
      * @throws Engine_Exception
@@ -530,68 +287,27 @@ class Lets_Encrypt extends Software
         return TRUE;
     }
 
+    /**
+     * Sets the admin e-mail address.
+     *
+     * @param string $email admin e-mail address
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    public function set_email($email)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_email($email));
+
+        $this->_set_parameter('email', $email);
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N  M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Validation routine for ceritificates.
-     *
-     * @param string $name certificate name
-     *
-     * @return string error message if certificate is invalid
-     */
-
-    public function validate_certificate_name($name)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $certificates = $this->get_certificates();
-
-        if (! array_key_exists($name, $certificates))
-            return lang('certificate_manager_certificate_invalid');
-    }
-
-    /**
-     * Validation routine for primary domain.
-     *
-     * @param string $domain primary domain
-     *
-     * @return string error message if primary domain is invalid
-     */
-
-    public function validate_domain($domain)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        if (!Network_Utils::is_valid_domain($domain))
-            return lang('network_domain_invalid');
-    }
-
-    /**
-     * Validation routine for domain list.
-     *
-     * @param string $domains domain list
-     *
-     * @return string error message domain list is invalid
-     */
-
-    public function validate_domains($domains)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $domains = preg_replace('/,/', ' ', $domains);
-        $domain_list = preg_split('/\s+/', $domains);
-        $valid = TRUE;
-
-        foreach ($domain_list as $domain) {
-            if ($this->validate_domain($domain))
-                $valid = FALSE;
-        }
-
-        if (!$valid)
-            return lang('lets_encrypt_domain_list_invalid');
-    }
 
     /**
      * Validation routine for the admin e-mail address.
@@ -621,7 +337,7 @@ class Lets_Encrypt extends Software
      * @throws Engine_Exception
      */
 
-    protected function _disengage_daemons()
+    public function _disengage_daemons()
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -648,7 +364,7 @@ class Lets_Encrypt extends Software
      * @throws Engine_Exception
      */
 
-    protected function _disengage_incoming_firewall()
+    public function _disengage_incoming_firewall()
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -679,7 +395,7 @@ class Lets_Encrypt extends Software
      * @throws Engine_Exception
      */
 
-    protected function _disengage_port_forwarding()
+    public function _disengage_port_forwarding()
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -715,7 +431,7 @@ class Lets_Encrypt extends Software
      * @throws Engine_Exception
      */
 
-    protected function _engage_daemons($states)
+    public function _engage_daemons($states)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -741,7 +457,7 @@ class Lets_Encrypt extends Software
      * @throws Engine_Exception
      */
 
-    protected function _engage_incoming_firewall($state)
+    public function _engage_incoming_firewall($state)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -765,7 +481,7 @@ class Lets_Encrypt extends Software
      * @throws Engine_Exception
      */
 
-    protected function _engage_port_forwarding($rules)
+    public function _engage_port_forwarding($rules)
     {
         clearos_profile(__METHOD__, __LINE__);
 

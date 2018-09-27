@@ -7,9 +7,9 @@
  * @package    lets-encrypt
  * @subpackage javascript
  * @author     eGloo <developer@egloo.ca>
- * @copyright  2017 Marc Laporte
+ * @copyright  2017-2018 Marc Laporte
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       https://github.com/eglooca/app-lets-encrypt
+ * @link       https://github.com/WikiSuite/app-lets-encrypt
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -83,4 +83,3 @@ $(document).ready(function() {
 });
 
 // vim: ts=4 syntax=javascript
-

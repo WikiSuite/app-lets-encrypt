@@ -23,7 +23,7 @@ License: LGPLv3
 Group: Applications/API
 Requires: app-base-core
 Requires: app-network-core
-Requires: app-certificate-manager-core >= 1:2.4.10
+Requires: app-certificate-manager-core >= 1:2.5.10
 Requires: app-events-core
 Requires: app-tasks-core
 Requires: certbot >= 0.21.0
@@ -91,6 +91,7 @@ exit 0
 %dir /var/clearos/lets_encrypt/backup
 /usr/clearos/apps/lets_encrypt/deploy
 /usr/clearos/apps/lets_encrypt/language
+/usr/clearos/apps/lets_encrypt/api
 /usr/clearos/apps/lets_encrypt/libraries
 /etc/cron.d/app-lets-encrypt
 /var/clearos/events/lets_encrypt/lets_encrypt
