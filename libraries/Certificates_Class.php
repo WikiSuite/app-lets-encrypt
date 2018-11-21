@@ -5,7 +5,7 @@
  *
  * @category   apps
  * @package    lets-encrypt
- * @subpackage controllers
+ * @subpackage libraries
  * @author     eGloo <developer@egloo.ca>
  * @copyright  2017-2018 Marc Laporte
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
@@ -114,19 +114,27 @@ class Certificates_Class extends Engine
         clearos_profile(__METHOD__, __LINE__);
     }
 
+    ///////////////////////////////////////////////////////////////////////////////
+    // R E S T  M E T H O D S
+    ///////////////////////////////////////////////////////////////////////////////
+
     /**
-     * Adds a certificate.
+     * Creates a Let's Encrypt certificate.
      *
      * @param string $email   e-mail address to register for updates
      * @param string $domain  primary domain
      * @param array  $domains list of other domains
      *
      * @return array error entries if an error occurred.
+     * @throws Already_Exists_Exception, Engine_Exception
      */
 
     public function create($email, $domain, $domains)
     {
         clearos_profile(__METHOD__, __LINE__);
+
+        // Validation
+        //-----------
 
         Validation_Exception::is_valid($this->validate_email($email));
         Validation_Exception::is_valid($this->validate_domain($domain));
@@ -211,44 +219,108 @@ class Certificates_Class extends Engine
     }
 
     /**
-     * Deletes a certificate.
+     * Deletes certificate.
      *
      * @param string $name ceritificate domain name
      *
      * @return void
+     * @throws Not_Found_Exception, Engine_Exception
      */
 
     public function delete($name)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        Validation_Exception::is_valid($this->validate_certificate_name($name));
+        if (!$this->exists($name))
+            throw new Not_Found_Exception();
 
         $shell = new Shell();
         $shell->execute(Lets_Encrypt_Class::COMMAND_CERTBOT, 'delete --cert-name ' . $name, TRUE);
     }
 
     /**
-     * Returns certificate details.
+     * Checks the existence of certificate.
      *
-     * @param string $name certificate domain name
+     * @param string $name ceritificate domain name
      *
-     * @return array certificate details
-     * @throws Certificate_Not_Found_Exception, Engine_Exception
+     * @return boolean TRUE if certificate exists
+     * @throws Engine_Exception
      */
 
-    public function get($name)
+    public function exists($name)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        Validation_Exception::is_valid($this->validate_certificate_name($name));
+        Validation_Exception::is_valid($this->validate_name($name));
 
-        $listing = $this->listing();
+        try {
+            $attributes = $this->get($name);
+        } catch (Not_Found_Exception $e) {
+            return FALSE;
+        }
+
+        return TRUE;
+    }
+
+    /**
+     * Returns certificate information.
+     *
+     * @param string  $name     certificate domain name
+     * @param boolean $detailed return detailed information
+     *
+     * @return array certificate information
+     * @throws Not_Found_Exception, Engine_Exception
+     */
+
+    public function get($name, $detailed = TRUE)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_name($name));
+
+        $listing = $this->listing($detailed);
 
         if (!array_key_exists($name, $listing))
             throw new Not_Found_Exception();
 
         return $listing[$name];
+    }
+
+    /**
+     * Returns lists of certificates and details.
+     *
+     * @param boolean $detailed return full details
+     *
+     * @return array list of certs with details
+     * @throws Engine_Exception
+     */
+
+    public function listing($detailed = TRUE)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $folder = new Folder(Lets_Encrypt_Class::PATH_CERTIFICATES, TRUE);
+
+        if (!$folder->exists())
+            return [];
+
+        $certificate_list = $folder->get_listing();
+
+        $ssl = new SSL();
+
+        $certs = [];
+
+        foreach ($certificate_list as $certificate) {
+            $base_path = Lets_Encrypt_Class::PATH_CERTIFICATES . '/' . $certificate . '/';
+
+            $certs[$certificate]['certificate'] = $ssl->get_certificate_attributes($base_path . 'cert.pem', $detailed);
+            $certs[$certificate]['certificate']['filename'] = $base_path . 'cert.pem';
+            $certs[$certificate]['key']['filename'] = $base_path . 'privkey.pem';
+            $certs[$certificate]['intermediate']['filename'] = $base_path . 'chain.pem';
+            $certs[$certificate]['fullchain']['filename'] = $base_path . 'fullchain.pem';
+        }
+
+        return $certs;
     }
 
     /**
@@ -290,39 +362,6 @@ class Certificates_Class extends Engine
         return $important;
     }
 
-    /**
-     * Returns a list of certificates.
-     *
-     * @return array a list of certificates
-     */
-
-    public function listing()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $folder = new Folder(Lets_Encrypt_Class::PATH_CERTIFICATES, TRUE);
-
-        if (!$folder->exists())
-            return [];
-
-        $certificate_list = $folder->get_listing();
-
-        $ssl = new SSL();
-
-        $certs = [];
-
-        foreach ($certificate_list as $certificate) {
-            $base_path = Lets_Encrypt_Class::PATH_CERTIFICATES . '/' . $certificate . '/';
-
-            $certs[$certificate]['certificate'] = $ssl->get_certificate_attributes($base_path . 'cert.pem');
-            $certs[$certificate]['certificate']['filename'] = $base_path . 'cert.pem';
-            $certs[$certificate]['key']['filename'] = $base_path . 'privkey.pem';
-            $certs[$certificate]['intermediate']['filename'] = $base_path . 'chain.pem';
-            $certs[$certificate]['fullchain']['filename'] = $base_path . 'fullchain.pem';
-        }
-
-        return $certs;
-    }
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N  M E T H O D S
@@ -336,7 +375,7 @@ class Certificates_Class extends Engine
      * @return string error message if certificate is invalid
      */
 
-    public function validate_certificate_name($name)
+    public function validate_name($name)
     {
         clearos_profile(__METHOD__, __LINE__);
 
