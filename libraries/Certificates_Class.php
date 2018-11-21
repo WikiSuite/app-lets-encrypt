@@ -379,9 +379,7 @@ class Certificates_Class extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $certificates = $this->listing();
-
-        if (! array_key_exists($name, $certificates))
+        if (!Network_Utils::is_valid_domain($name))
             return lang('certificate_manager_certificate_invalid');
     }
 
